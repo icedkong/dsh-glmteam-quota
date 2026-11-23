@@ -14,7 +14,7 @@ const emptyServices = {
 };
 
 test('release identity, compatibility boundary and shipped metadata module are consistent', () => {
-  assert.equal(manifest.version, '0.7.6');
+  assert.equal(manifest.version, '0.1.0');
   assert.equal(PLUGIN_VERSION, manifest.version);
   assert.equal(manifest.engines.dsh, '>=0.2.2-rc.1 <0.2.3-0');
   assert.ok(manifest.files.includes('index.js'));

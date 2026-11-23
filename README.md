@@ -4,20 +4,44 @@
 
 # GLM Quota+
 
-**For DeepSeek Harness Desktop: a multi-provider quota and usage dashboard with balances, subscription quotas (including the **GLM Team Plan**) and OpenAI organization spend. A single 5-hour energy ring in the composer opens a remaining-quota card where you switch between the personal and team plan. No npm runtime dependencies or install scripts.**
+**A quota and usage dashboard for DeepSeek Harness Desktop: multi-provider balances, subscription quotas (including the **GLM Team Plan**) and OpenAI organization spend. A single 5-hour energy ring in the composer opens a remaining-quota card where you switch between the personal and team plan. No npm runtime dependencies or install scripts.**
 
 [![Stars](https://img.shields.io/github/stars/icedkong/dsh-glmteam-quota?style=flat&label=stars&color=f59e0b)](https://github.com/icedkong/dsh-glmteam-quota/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-0891b2)](LICENSE)
+[![upstream](https://img.shields.io/badge/fork%20of-DSH%20Quota%2B-3859FF?logo=github)](https://github.com/WXYS1209/dsh-quota-cordis)
 
-[中文说明](<README.zh.md>) &nbsp;|&nbsp; [GitHub](https://github.com/icedkong/dsh-glmteam-quota) &nbsp;|&nbsp; [MIT](<LICENSE>)
-
-> Forked from [WXYS1209/dsh-quota-cordis](https://github.com/WXYS1209/dsh-quota-cordis) (DSH Quota+, MIT). This fork adds GLM Team Plan quota and trims the UI; the upstream copyright and license notices are retained.
+[中文说明](<README.zh.md>) &nbsp;|&nbsp; [GitHub](https://github.com/icedkong/dsh-glmteam-quota) &nbsp;|&nbsp; [Upstream](https://github.com/WXYS1209/dsh-quota-cordis) &nbsp;|&nbsp; [MIT](<LICENSE>)
 
 </div>
 
+## Tribute
+
+**GLM Quota+ is a fork of [DSH Quota+](https://github.com/WXYS1209/dsh-quota-cordis)** by [WXYS1209](https://github.com/WXYS1209).
+
+Most of what you see here — the DeepSeek / GLM / MiniMax / OpenCode / Codex / OpenAI quota adapters, the "fail closed rather than leak credentials to a relay" security model, CSRF and read-back checks, several hundred tests and the release engineering — comes from upstream. This repository only adds one scenario upstream did not cover and trims the interface to personal taste.
+
+Upstream's full commit history, MIT license and copyright notices are preserved. If this plugin helps you, please star the [upstream repository](https://github.com/WXYS1209/dsh-quota-cordis) first; it is still maintained, and shared data such as company rules keeps refreshing from upstream.
+
+## What this fork changes (relative to upstream 0.7.5)
+
+### Added
+
+- **GLM Team Plan quota.** An opt-in "Team" sibling row for each GLM Coding Plan route: the official `quota/limit` monitor with `?type=2` and optional `bigmodel-organization` / `bigmodel-project` scope headers — the same request ZCode makes (its source was consulted, and the shape was verified with a real team account). Enable it under Quotas → GLM / Z.AI → Additional settings → GLM Team Plan and enter the organization and project IDs.
+- **Definite states instead of "unrecognized response".** The personal monitor rejects a team key with "no coding plan"; the team monitor returns empty data until a project scope is supplied. Both now read as "no personal plan" and "scope required" instead of a red error.
+- **Remaining-quota card.** The composer popup is a "Remaining quota" card: a clock-style countdown for the 5-hour pool, the reset date for longer pools, bars filled by remaining amount, a Personal | Team switch and a "More ›" link to the official dashboard.
+- **5-hour energy ring.** The composer summary collapses into one ring that mirrors DSH's built-in ContextMeter (14 px, same spacing and hover state), showing the 5-hour pool's remaining share, coloured by your green / orange / red thresholds.
+- `scripts/probe-glm-team.mjs`: probe the raw personal/team monitor replies with your own key for troubleshooting (never prints the key).
+
+### Trimmed and polished
+
+- **The Models tab is removed.** Upstream ships a provider/model manager inside the settings page that duplicates DSH's official Models page. This fork keeps only the Quotas and Settings tabs, opens on Quotas, and no longer instantiates that manager (fewer pointless requests and subscriptions).
+- Unsaved Team Plan input **survives window switches** (upstream's other forms reload on focus).
+- New name and icon: GLM Quota+, package `dsh-glmteam-quota`, matching the repository.
+- Untouched: the security model, endpoint allow-lists, the company-rule data source (still upstream's public rule file) and the agent tools (`provider_quota`, `quota_color_settings`, `provider_company_rules`).
+
 ## Install
 
-This documentation covers **0.7.6**. The declared DSH range remains `>=0.2.2-rc.1 <0.2.3-0`; the recommended and source-audited baseline is **0.2.2-rc.5**, not a re-test of every earlier RC.
+This documentation covers **0.1.0**. The DSH range is inherited from upstream: `>=0.2.2-rc.1 <0.2.3-0`; the source-audited baseline is **0.2.2-rc.5**.
 
 ```sh
 dsh plugin --profile desktop add https://github.com/icedkong/dsh-glmteam-quota.git
@@ -27,42 +51,41 @@ dsh plugin --profile desktop add /path/to/checkout
 
 After updating plugin code, restart DSH and fully refresh the page. The form's **Reload** button refreshes data, not code.
 
+If upstream's `dsh-quota-cordis` is installed, remove it first — both register the same `provider-quota` entry and cannot be enabled together. Settings live in the DSH profile's `cordis.patch.yml` under the unchanged entry id, so they survive the swap.
+
 ## Features
 
 The settings page is titled **GLM Quota+**, with **Quotas** and **Settings** tabs; providers and models are managed on DSH’s official Models page:
 
-- **Quotas:** dashboard for multi-provider balances, subscription quotas and OpenAI organization spend.
+- **Quotas:** dashboard for multi-provider balances, subscription quotas (including the GLM Team Plan) and OpenAI organization spend.
 - **Settings:** configurable remaining-quota thresholds.
-- **Composer summary:** compact current-provider status with an upward popup.
+- **Composer energy ring:** the current provider's 5-hour pool; click to open the remaining-quota card.
 - **Agent tools:** `provider_quota`, `quota_color_settings` and `provider_company_rules`.
 
 ## Provider support
 
 | Provider | Display | Status |
 |---|---|---|
-| DeepSeek API | Available, recharge and granted balance | Accepted |
-| DeepSeek account | Separate recharge and bonus wallets | Accepted |
-| GLM Coding Plan — China | Subscription windows | Accepted |
+| DeepSeek API | Available, recharge and granted balance | Upstream accepted |
+| DeepSeek account | Separate recharge and bonus wallets | Upstream accepted |
+| GLM Coding Plan — China | Subscription windows | Upstream accepted |
 | GLM Coding Plan — Global | Subscription windows | Preview |
-| GLM Team Plan — China / Global | Opt-in sibling row: `?type=2` team monitor with optional organization/project scope | Preview (source-verified against ZCode) |
+| **GLM Team Plan — China / Global** | Sibling row: `?type=2` team monitor + organization/project scope | **Verified with a real team account** |
 | GLM Standard API — China | CNY balance and resource packages | Preview |
 | Z.AI Standard API — Global | Detection/status only | No balance query |
-| OpenAI API | Organization spend: UTC today, yesterday, 7d/30d; API-key breakdown | Accepted |
-| OpenAI Codex | Subscription windows and reported Credits | Windows accepted; Credits preview |
+| OpenAI API | Organization spend: UTC today, yesterday, 7d/30d; API-key breakdown | Upstream accepted |
+| OpenAI Codex | Subscription windows and reported Credits | Windows accepted upstream; Credits preview |
 | OpenCode Go | Reported 5-hour/weekly/monthly windows | Preview |
-| MiniMax China M Plan | Remaining quota | Accepted |
+| MiniMax China M Plan | Remaining quota | Upstream accepted |
 | Other providers/relays | Status and reason | No quota adapter |
 
 Missing data is not shown as zero; Credits are usage units, not an API cash balance.
 
 ## Usage notes
 
+- **GLM Team Plan quota is opt-in.** Open Quotas → GLM / Z.AI → Additional settings → GLM Team Plan, tick the Coding Plan route, enter both the organization and project IDs and save. The plugin queries the official `?type=2` team monitor with the route's own key; it never picks a default project, so an empty scope is reported as "scope required". The IDs are the `bigmodel-organization` / `bigmodel-project` header values the official team usage page sends — visible in the browser's network panel. They are stored in plugin config, travel only as request headers and never appear in quota rows.
 - **OpenAI spend needs a separate organization Admin key**, not an inference key. Enter it in OpenAI details; cost data may arrive late or be revised.
-- **GLM Team Plan quota is opt-in.** Open Quotas → GLM / Z.AI → Additional settings → GLM Team Plan, tick the Coding Plan route and save. The plugin queries the official monitor with `?type=2` using the route's own key, the same request ZCode makes. Enter both the organization and project IDs: the monitor never picks a default project and answers an empty success without a scope, which the row reports as "scope required". The official team usage page sends the same IDs as `bigmodel-organization` / `bigmodel-project` request headers. The IDs are stored in plugin config, travel only as `bigmodel-organization` / `bigmodel-project` request headers and never appear in quota rows. A key that belongs to no team plan is reported as such rather than as an outage.
-- Providers follow the actual Host-resolved endpoint first. If no route endpoint exists, a version-matched built-in catalog with a single model hostname can supply a separately labelled grouping hint; it does not change the request endpoint. Saved user settings or configured authentication sort first, then localized names; unknown endpoints stay last. Merely enabling a default entry does not count. Edit expands inside its card; discovery uses a dialog and explicit selection. Final **Save** persists changes; editing does not switch the selected/default model.
-- **Reasoning efforts** can be inherited, disabled, or configured per editable model where the Host schema supports them. Blank platform values use the selected level's name, except a supported blank `off` uses the protocol default. Choose the effort for a conversation in DSH's native model selector.
-- **Fetch available models** tries the platform first on supported listing routes (OpenAI-compatible, Anthropic and Gemini). The dialog labels live results and their credential scope. If live listing fails or is unsupported, it uses the existing DSH catalog when that fallback is safe, without retrying a failed custom endpoint. A successful empty list is not replaced. Fixed platform endpoints follow the DSH Host's outbound proxy settings; custom endpoints need direct public HTTPS access. OpenAI live listing uses an API key, not ChatGPT subscription authorization. Codex uses the DSH built-in catalog.
-- **Codex login is built into this plugin using DSH native authorization; no extra OAuth UI plugin is required.** Login starts only on an explicit click and is safely unavailable if the native capability is missing. Existing native-grant quota/Credits queries remain independent of signing in here. The new login integration has source/synthetic coverage, not a new live-account OAuth acceptance.
+- **Codex login reuses DSH native authorization**; no extra OAuth UI plugin. Login starts only on an explicit click and is safely unavailable if the native capability is missing.
 
 ## Privacy and maintenance
 
@@ -74,14 +97,8 @@ See [security boundaries](<SECURITY.md>) and [provider-rule coverage/maintenance
 
 - `index.js` / `client.js` — Host and browser entry points.
 - `src/` — runtime modules; bundled data lives in `src/data/`.
-- `company-rules.json` — published provider-rule data, also fetched online at runtime, so it stays at the repository root.
+- `company-rules.json` — provider-rule data (kept in sync with upstream), also fetched online at runtime, so it stays at the repository root.
 - `locale/`, `icon.png`, `cordis.patch.yml` — package resources.
-- `test/`, `scripts/`, `docs/` — tests, maintenance scripts and documentation.
-
-```sh
-npm run check
-npm test
-npm run test:company-coverage
-```
+- `test/`, `scripts/`, `docs/` — tests, maintenance scripts and documentation. `node --test` runs the whole suite.
 
 Tests do not replace real-browser/provider acceptance. Release notes: [Changelog](<CHANGELOG.md>).

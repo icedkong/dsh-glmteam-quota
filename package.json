@@ -1,6 +1,6 @@
 {
   "name": "dsh-glmteam-quota",
-  "version": "0.7.6",
+  "version": "0.1.0",
   "description": "GLM Quota+ — quota and usage dashboard for DeepSeek Harness: multi-provider balances and subscription quotas (DeepSeek, GLM / Z.AI including GLM Team Plan, MiniMax, OpenCode, Codex) plus OpenAI organization spend. Focused fork of DSH Quota+.",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/icedkong/dsh-glmteam-quota.git" },

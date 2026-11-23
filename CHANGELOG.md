@@ -1,10 +1,11 @@
 # Changelog
 
-All notable changes are documented here. Release dates from 0.7.3 use Asia/Shanghai (UTC+08:00); earlier entries retain their recorded UTC dates.
+This fork (**GLM Quota+**, `dsh-glmteam-quota`) starts its own version line at **0.1.0** and continues from upstream [DSH Quota+](https://github.com/WXYS1209/dsh-quota-cordis) 0.7.5. Upstream history is preserved below the divider. Release dates use Asia/Shanghai (UTC+08:00).
 
-## 0.7.6 — 2026-11-23
+## 0.1.0 — 2026-11-23
 
-- **Renamed to GLM Quota+** (`dsh-glmteam-quota`, repository `icedkong/dsh-glmteam-quota`) as a focused fork of DSH Quota+ (`WXYS1209/dsh-quota-cordis`, MIT; upstream notices retained). The package name, client module id, bundle patch, locale titles, metadata and docs all follow the new name; the settings entry id (`provider-quota`) and service names are unchanged. Company rules still refresh from the upstream public rule source.
+First release of the fork, based on DSH Quota+ 0.7.5.
+- **Renamed to GLM Quota+** (`dsh-glmteam-quota`, repository `icedkong/dsh-glmteam-quota`) as a focused fork of DSH Quota+ (`WXYS1209/dsh-quota-cordis`, MIT; upstream notices retained). New plugin icon. The package name, client module id, bundle patch, locale titles, metadata and docs all follow the new name; the settings entry id (`provider-quota`) and service names are unchanged. Company rules still refresh from the upstream public rule source.
 - Add **GLM Team Plan** quota as an opt-in sibling row for each GLM Coding Plan route (China `open.bigmodel.cn` and Global `api.z.ai`). It reuses the route's own API key against the official monitor with `?type=2`, which the backend routes to the team subscription, and sends the optional `bigmodel-organization` / `bigmodel-project` scope headers exactly as ZCode does (`docs/bigmodel-coding-plan-usage-quota.md`, `bigmodelUsageQuotaProvider.ts`). Live probe with a team key confirmed the request shape: the personal monitor rejects the key ("当前用户不存在coding plan"), the team monitor accepts `type=2` but answers an empty success until an organization/project scope is supplied.
 - Enable it under **Quotas → GLM / Z.AI → Additional settings → GLM Team Plan** and enter both the organization and project IDs: the team monitor never picks a default project, and an empty success without a scope is reported as `team-scope-required` instead of a parse error or a fake zero. IDs accept up to 128 printable ASCII characters, both or neither, are stored in plugin config, are part of the team row's cache identity and never appear in quota rows.
 - The team row inherits the route's key, dashboard link and any blocked state, has its own cache identity and per-row refresh, and is labelled "团队版 / Team". Definite "no plan" replies from either monitor are reported as a state (`no-plan`, worded per personal/team row) instead of a generic upstream error, so a team key on the personal row no longer shows "unrecognized response".
@@ -12,6 +13,10 @@ All notable changes are documented here. Release dates from 0.7.3 use Asia/Shang
 - Remove the **Models / 模型** tab from this plugin's settings page: provider and model editing duplicated DSH's official Models page. The page now opens on **Quotas**, and the provider manager is no longer instantiated (no route-host/company-rule requests or event subscriptions). Quota lookup never depended on it.
 - Keep unsaved Team Plan edits when the window loses and regains focus: the visibility refresh now only updates writability and CSRF, and the draft is replaced only on first load and after a save's readback. Show an "Unsaved changes" note while the draft differs from the saved values.
 - Add `saveGlmTeamPlans` to the settings endpoint with the existing CSRF, payload-shape and readback checks; keep DSH compatibility `>=0.2.2-rc.1 <0.2.3-0`.
+
+---
+
+_The entries below are the upstream DSH Quota+ changelog, kept for reference._
 
 ## 0.7.5 — 2026-11-20
 
