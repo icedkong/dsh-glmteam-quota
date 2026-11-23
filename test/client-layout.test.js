@@ -511,6 +511,9 @@ test('provider company mapping groups known routes into institution cells', () =
   assert.ok(source.includes("function isRollingWindow(metric) { return metric.label === 'rolling' || metric.durationSeconds === 18_000; }"));
   assert.ok(source.includes("remainingQuota: '剩余额度', more: '更多', planSwitch: '切换套餐'"));
   assert.ok(source.includes("remainingQuota: 'Remaining quota', more: 'More', planSwitch: 'Switch plan'"));
+  // Unsaved Team Plan edits survive a window switch: visibility refresh keeps the draft.
+  assert.ok(source.includes("const refresh = () => { if (document.visibilityState === 'visible') read(undefined, { resetDraft: false }); };"));
+  assert.ok(source.includes("setData(body); if (resetDraft) setDraft(draftFrom(body.glmTeamPlans));"));
   assert.ok(source.includes("if (row.reason === 'zai-api-status-only') return 'glm'"));
   assert.ok(source.includes("default: return 'other'"));
   assert.ok(providers.includes("const routes = rows.filter(row => providerCompany(row) === option.key)"));
