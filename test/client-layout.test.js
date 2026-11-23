@@ -39,7 +39,7 @@ function providerManagerContext(options = {}) {
   const defaultModules = {
     manifest: {
       modules: [
-        { id: 'dsh-quota-cordis', inject: ['@deepseek-ai/dsh-api-remotes'] },
+        { id: 'dsh-glmteam-quota', inject: ['@deepseek-ai/dsh-api-remotes'] },
         { id: '@deepseek-ai/dsh-api-remotes', inject: [] },
       ],
       plugins: [{ id: '@deepseek-ai/dsh-api-remotes' }],
@@ -380,12 +380,14 @@ test('styling stays theme-token-only and UI never creates a second app or uses r
   assert.ok(source.includes("'aria-modal': false"));
 });
 
-test('bundle metadata gives a concise quota and model-management overview in both locales', () => {
+test('bundle metadata gives a concise quota overview in both locales', () => {
   for (const meta of [enMeta, zhMeta]) {
-    assert.ok(meta.title);
+    assert.equal(meta.title, 'GLM Quota+');
     assert.match(meta.description, /quota|额度/i);
-    assert.match(meta.description, /model|模型/i);
+    assert.match(meta.description, /GLM/i);
     assert.match(meta.description, /OpenAI/i);
+    // Model editing moved to the official page; the descriptor must not promise it.
+    assert.doesNotMatch(meta.description, /model management|模型管理/i);
   }
   assert.ok(enMeta.description.length <= 180);
   assert.ok(zhMeta.description.length <= 100);
@@ -460,27 +462,19 @@ test('client manifest requests Remote and configForms dependencies used by model
   assert.ok(inject.includes('configForms'));
 });
 
-test('model, quota, and settings tabs are separate and accessible', () => {
+test('quota and settings tabs are separate and accessible; model editing stays on the official page', () => {
   const page = source.split('function Page()')[1].split('function PopupSurface')[0];
   assert.ok(source.includes("providerSettingsTab: '额度'"));
-  assert.ok(source.includes("providerManagerTab: '模型'"));
-  assert.ok(source.includes("empty: '尚未发现已配置的提供商。请在「模型」标签或官方「模型」设置中添加提供商。'"));
-  assert.ok(source.includes("providerManagerTab: 'Models'"));
-  assert.ok(source.includes("empty: 'No configured providers found. Add one in the Models tab or official Models settings.'"));
+  assert.ok(source.includes("empty: '尚未发现已配置的提供商。请在官方「模型」设置中添加提供商。'"));
+  assert.ok(source.includes("empty: 'No configured providers found. Add one in the official Models settings.'"));
   assert.ok(source.includes("colorsTab: '设置'"));
-  assert.ok(page.includes("React.useState('models')"));
-  assert.ok(page.includes("const tabs = ['models', 'providers', 'colors']"));
-  assert.ok(page.includes("const [modelsVisited, setModelsVisited] = React.useState(true)"));
-  assert.ok(page.includes("const selectTab = id => { if (id === 'models') setModelsVisited(true); setTab(id); }"));
-  assert.ok(page.includes("modelsVisited ? h(ProviderManager, { manager: providerManager }) : null"));
+  assert.ok(page.includes("React.useState('providers')"));
+  assert.ok(page.includes("const tabs = ['providers', 'colors']"));
   assert.ok(page.includes("role: 'tablist'"));
   assert.ok(page.includes("role: 'tab'"));
   assert.ok(page.includes("'aria-selected': tab === id"));
   assert.ok(page.includes("tabIndex: tab === id ? 0 : -1"));
-  assert.ok(page.includes("id: 'pq-panel-models', role: 'tabpanel'"));
-  assert.ok(page.indexOf("id: 'pq-panel-models'") < page.indexOf("id: 'pq-panel-providers'"), 'panel order follows the tab order');
-  assert.ok(page.includes("id: 'pq-panel-models', role: 'tabpanel'"));
-  assert.ok(page.includes("h(ProviderManager, { manager: providerManager })"));
+  assert.ok(page.indexOf("id: 'pq-panel-providers'") < page.indexOf("id: 'pq-panel-colors'"), 'panel order follows the tab order');
   assert.ok(page.includes("id: 'pq-panel-colors', role: 'tabpanel'"));
   assert.ok(page.includes("tab === 'colors' ? h(QuotaSettings) : null"));
   assert.ok(page.includes("h(ProviderSettings, { rows, loading: state.loading, error: state.error, colorThresholds: state.data?.colorThresholds })"));
@@ -488,13 +482,35 @@ test('model, quota, and settings tabs are separate and accessible', () => {
   for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End']) assert.ok(page.includes(`'${key}'`));
   assert.ok(page.includes('tabRefs.current[target]?.focus()'));
   assert.equal(source.includes("ctx.slots.inject('settings.plugins.tab'"), false);
+  // No Models tab: the provider manager is neither mounted nor instantiated.
+  assert.ok(!page.includes('ProviderManager'));
+  assert.ok(!page.includes('pq-panel-models'));
+  assert.ok(!source.includes('createProviderManager(ctx,'));
 });
 
 test('provider company mapping groups known routes into institution cells', () => {
   const providers = source.split('function ProviderSettings({ rows, loading, error, colorThresholds })')[1].split('function Page()')[0];
   assert.ok(source.includes("case 'openai': case 'codex': return 'openai'"));
   assert.ok(source.includes("case 'deepseek': case 'account': return 'deepseek'"));
-  assert.ok(source.includes("case 'glm-cn': case 'glm-standard-cn': case 'zai-coding-plan': return 'glm'"));
+  assert.ok(source.includes("case 'glm-cn': case 'glm-standard-cn': case 'zai-coding-plan': case 'glm-cn-team': case 'zai-coding-plan-team': return 'glm'"));
+  assert.ok(source.includes("if (isTeamPlanKind(row.kind)) return `${providerName({ ...row, kind: row.kind.slice(0, -'team'.length) })} · ${t('teamPlan')}`"));
+  // The dock and popup must consider the Team Plan sibling of the current provider.
+  assert.ok(source.includes("const row = preferredRow(state.data?.rows ?? [], provider);"));
+  assert.ok(source.includes("const rows = providerRows(state.data?.rows ?? [], opened.provider);"));
+  assert.ok(source.includes("return candidates.find(row => row.metrics.length > 0) ?? candidates[0] ?? null;"));
+  assert.ok(source.includes("const team = rows.find(item => item.id === `${provider}::team`);"));
+  // The popup is a remaining-quota card with a personal/team switch; the dock is one 5-hour ring.
+  assert.ok(source.includes("rows.length > 1 ? h('div', { className: 'pq-seg', role: 'group', 'aria-label': t('planSwitch') }"));
+  assert.ok(source.includes("t(isTeamPlanKind(item.kind) ? 'teamPlan' : 'personalPlan')))) : null),"));
+  assert.ok(source.includes("tiles.length ? t('remainingQuota') : providerName(row)"));
+  assert.ok(source.includes("h(QuotaTile, { key: `tile-${index}`, metric, colorThresholds: state.data?.colorThresholds, now })"));
+  assert.ok(source.includes("const ringMetric = row.metrics.find(metric => metric.type === 'quota-window' && isRollingWindow(metric));"));
+  assert.ok(source.includes("h(QuotaRing, { metric: ringMetric, colorThresholds }), h('span', null, `${percent(remainingOf(ringMetric))}%`))"));
+  assert.ok(source.includes("h('svg', { className: 'pq-ring', viewBox: '0 0 14 14', width: 14, height: 14"), 'ring mirrors the built-in ContextMeter geometry');
+  assert.ok(!source.includes("pq-ring-text"), 'the ring carries no percentage text');
+  assert.ok(source.includes("function isRollingWindow(metric) { return metric.label === 'rolling' || metric.durationSeconds === 18_000; }"));
+  assert.ok(source.includes("remainingQuota: '剩余额度', more: '更多', planSwitch: '切换套餐'"));
+  assert.ok(source.includes("remainingQuota: 'Remaining quota', more: 'More', planSwitch: 'Switch plan'"));
   assert.ok(source.includes("if (row.reason === 'zai-api-status-only') return 'glm'"));
   assert.ok(source.includes("default: return 'other'"));
   assert.ok(providers.includes("const routes = rows.filter(row => providerCompany(row) === option.key)"));
@@ -503,7 +519,7 @@ test('provider company mapping groups known routes into institution cells', () =
   assert.ok(!source.includes("id: 'pq-panel-overview'"));
 });
 
-test('provider management is an independent top-level tab with focus restoration', () => {
+test('provider management component is retained but unmounted; its focus restoration code stays intact', () => {
   const settings = source.split('function ProviderSettings({ rows, loading, error, colorThresholds })')[1].split('function Page()')[0];
   assert.equal(settings.includes('showManager'), false);
   assert.equal(settings.includes('ProviderManager'), false);
@@ -541,8 +557,8 @@ test('provider management is an independent top-level tab with focus restoration
   assert.ok(providerManager.includes("isEditing ? renderEditor() : null"));
   assert.ok(providerManager.includes('JSON.stringify([row.entry.settingsNs, row.entry.provider])'));
   const page = source.split('function Page()')[1].split('function PopupSurface')[0];
-  assert.ok(page.includes("id: 'pq-panel-models'"));
-  assert.ok(page.includes("h(ProviderManager, { manager: providerManager })"));
+  assert.ok(!page.includes("id: 'pq-panel-models'"), 'the Models tab is gone');
+  assert.equal(page.includes("h(ProviderManager, { manager: providerManager })"), false, 'the manager component is never mounted');
   assert.equal(page.includes(', manager: providerManager })'), false);
 });
 
@@ -613,7 +629,6 @@ test('company overview replaces rule diagnostics with accessible local search an
   assert.equal(backToCompanies.includes('setCompanyQuery'), false, 'back keeps the overview query and editor draft lifecycle unchanged');
   const filterHelper = pureBlock.split('function filterModelProviderCompanyGroups(')[1];
   assert.equal(/\b(?:fetch|requestCompanyRules|manager\.load|readRouteHosts)\s*\(/.test(filterHelper), false);
-  assert.ok(source.includes('readCompanyRules: signal => requestCompanyRules(false, signal)'));
   assert.ok(source.includes("providerManagerCompanySearchLabel: '搜索提供商'"));
   assert.ok(source.includes("providerManagerCompanySearchLabel: 'Search providers'"));
 });
@@ -750,7 +765,8 @@ test('provider manager separates settings from credentials and preserves drafts 
   assert.equal(manager.includes('context.remote?.llm'), false);
   assert.equal(manager.includes('context.remote.settings'), false);
   assert.equal(manager.includes('context.remote.credentials'), false);
-  assert.ok(source.includes("ctx.inject(['remote.llm'], () => { void providerManager.retryAfterRemoteReady(); })"));
+  // The manager is no longer instantiated since the Models tab was removed.
+  assert.equal(source.includes("createProviderManager(ctx,"), false);
   assert.ok(!manager.includes('credentials.unset'));
 
   const editor = source.split('function ProviderManagerEditor({ manager, target, mode, onBack, onSaved })')[1].split('function ProviderSettings')[0];
@@ -896,7 +912,7 @@ test('provider manager diagnoses the Remote module graph with allowlisted states
   const makeModules = ({ dependency = true, apiModule = true, pluginEntry = true, importFailed = false, reconciliationFailed = false } = {}) => ({
     manifest: {
       modules: [
-        { id: 'dsh-quota-cordis', inject: dependency ? ['@deepseek-ai/dsh-api-remotes'] : [] },
+        { id: 'dsh-glmteam-quota', inject: dependency ? ['@deepseek-ai/dsh-api-remotes'] : [] },
         ...(apiModule ? [{ id: '@deepseek-ai/dsh-api-remotes', inject: [] }] : []),
       ],
       plugins: pluginEntry ? [{ id: '@deepseek-ai/dsh-api-remotes' }] : [],
@@ -1181,8 +1197,8 @@ test('browser fallback is generated from the independent JSON rule source and dy
   assert.equal(group.title, '新公司');
   assert.equal(group.icon, null);
   assert.equal(providerIconKeyForGroupKey(group.key, group.icon), null);
-  assert.ok(source.includes("requestCompanyRules(true, signal)"));
-  assert.ok(source.includes("JSON.stringify({ action: 'refresh' })"));
+  // The browser no longer drives company-rule refresh; the Host route serves the agent tool only.
+  assert.equal(source.includes("JSON.stringify({ action: 'refresh' })"), false);
   assert.equal(source.includes("t('companyRulesPrivacy')"), false);
   assert.equal(source.includes('dangerouslySetInnerHTML'), false);
 });
@@ -1335,7 +1351,7 @@ test('provider settings use clickable organization cells with OpenAI details nes
   const page = source.split('function Page()')[1].split('function PopupSurface')[0];
   const providers = source.split('function ProviderSettings({ rows, loading, error, colorThresholds })')[1].split('function Page()')[0];
   const extra = source.split('function OpenAIExtraSettings({ routes })')[1].split('function ProviderSettings')[0];
-  assert.ok(page.includes("const tabs = ['models', 'providers', 'colors']"));
+  assert.ok(page.includes("const tabs = ['providers', 'colors']"));
   assert.ok(page.includes("h(ProviderSettings, { rows, loading: state.loading, error: state.error, colorThresholds: state.data?.colorThresholds })"));
   assert.ok(providers.includes("const routes = rows.filter(row => providerCompany(row) === option.key)"));
   assert.ok(providers.includes("option.key === 'other'"));
@@ -1551,7 +1567,7 @@ test('Codex grant-state guidance remains fixed and never triggers login', () => 
 
 test('Z.AI Coding Plan is distinguished from Standard API billing rows', () => {
   assert.ok(source.includes("if (row.reason === 'zai-api-status-only') return t('zai-api-status-only-short')"));
-  assert.ok(source.includes("['glm-cn', 'zai-coding-plan', 'codex', 'opencode-go', 'minimax-cn'].includes(row.kind)"));
+  assert.ok(source.includes("['glm-cn', 'zai-coding-plan', 'glm-cn-team', 'zai-coding-plan-team', 'codex', 'opencode-go', 'minimax-cn'].includes(row.kind)"));
   assert.ok(source.includes("zaiPlan: 'GLM Coding · Global'"));
   assert.ok(source.includes("'zai-api-status-only': 'This is an international Z.AI Standard API route (/api/paas/v4), not a Coding Plan endpoint."));
   assert.ok(source.includes("'zai-api-status-only': '这是 Z.AI 国际普通 API 路由（/api/paas/v4），不是 Coding Plan"));

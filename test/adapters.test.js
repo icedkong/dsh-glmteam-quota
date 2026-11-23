@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyProvider, parseDeepSeek, parseGlm, parseGlmResourcePackagePage, parseGlmStandardBalance, parseMiniMax } from '../src/adapters.js';
+import { classifyProvider, isGlmEmptyQuota, isGlmNoPlan, isTeamPlanKind, parseDeepSeek, parseGlm, parseGlmResourcePackagePage, parseGlmStandardBalance, parseMiniMax, teamPlanHeaders, teamPlanKind } from '../src/adapters.js';
 
 const quota = (limits, extra = {}) => ({ success: true, code: 200, data: { limits }, ...extra });
 const credit = (extra = {}) => ({ type: 'CREDIT_LIMIT', unit: 3, number: 5, percentage: 42, ...extra });
@@ -296,4 +296,39 @@ test('GLM Standard API packages distinguish token and request units without reta
   const localized = parseGlmResourcePackagePage({ code: 200, total: 1, rows: [{ resourcePackageName: 'Local time', consumeType: 'TIMES', tokensMagnitude: 10, availableBalance: 5, status: 1, displayStatus: '有效', expirationTime: '2026-12-11 16:17:58' }] });
   assert.equal(localized.packages[0].status, 'active');
   assert.equal(localized.packages[0].expirationTime, '2026-12-11 16:17:58');
+});
+
+test('GLM Team Plan helpers map kinds, scope headers and recognize the no-plan reply', () => {
+  assert.equal(teamPlanKind('glm-cn'), 'glm-cn-team');
+  assert.equal(teamPlanKind('zai-coding-plan'), 'zai-coding-plan-team');
+  assert.equal(teamPlanKind('glm-cn-team'), undefined);
+  assert.equal(teamPlanKind('deepseek'), undefined);
+  assert.equal(teamPlanKind(undefined), undefined);
+  assert.equal(isTeamPlanKind('glm-cn-team'), true);
+  assert.equal(isTeamPlanKind('zai-coding-plan-team'), true);
+  assert.equal(isTeamPlanKind('glm-cn'), false);
+  assert.deepEqual(teamPlanHeaders({ organizationId: 'org', projectId: 'proj' }), { 'bigmodel-organization': 'org', 'bigmodel-project': 'proj' });
+  assert.deepEqual(teamPlanHeaders({ organizationId: '', projectId: '' }), {});
+  assert.deepEqual(teamPlanHeaders(undefined), {});
+  // Half scopes pass through untouched; the settings layer rejects them earlier.
+  assert.deepEqual(teamPlanHeaders({ organizationId: 'org' }), { 'bigmodel-organization': 'org' });
+  assert.equal(isGlmNoPlan({ code: 400, msg: '当前用户不存在coding plan', success: false }), true);
+  assert.equal(isGlmNoPlan({ code: 403, msg: '没有资格' }), true);
+  assert.equal(isGlmNoPlan({ message: 'No coding plan found' }), true);
+  assert.equal(isGlmNoPlan({ code: 200, data: { limits: [] } }), false);
+  assert.equal(isGlmNoPlan({ msg: 123 }), false);
+  assert.equal(isGlmNoPlan({ msg: '操作成功' }), false);
+  assert.equal(isGlmNoPlan(null), false);
+  assert.equal(isGlmNoPlan('x'), false);
+  // Live-verified Team monitor reply without a project scope: success, empty data.
+  assert.equal(isGlmEmptyQuota({ code: 200, msg: '操作成功', data: {}, success: true }), true);
+  assert.equal(isGlmEmptyQuota({ code: 200, data: { limits: [] }, success: true }), true);
+  assert.equal(isGlmEmptyQuota({ code: 200, data: { limits: [{ type: 'TOKENS_LIMIT', unit: 3, number: 5, percentage: 1 }] } }), false);
+  assert.equal(isGlmEmptyQuota({ code: 500, msg: '当前用户不存在coding plan', success: false }), false);
+  assert.equal(isGlmEmptyQuota({ code: 200, success: false }), false);
+  assert.equal(isGlmEmptyQuota(null), false);
+  // The team monitor answers in the personal monitor's shape; parseGlm applies unchanged.
+  const metric = parseGlm({ code: 200, data: { limits: [{ type: 'TOKENS_LIMIT', unit: 6, number: 1, percentage: 25 }] } })[0];
+  assert.equal(metric.label, 'weekly');
+  assert.equal(metric.usedPercent, 25);
 });

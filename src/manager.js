@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { PLUGIN_VERSION } from './version.js';
-import { classifyProvider, parseDeepSeek, parseGlm, parseGlmResourcePackagePage, parseGlmStandardBalance, parseMiniMax } from './adapters.js';
+import { classifyProvider, isGlmEmptyQuota, isGlmNoPlan, isTeamPlanKind, parseDeepSeek, parseGlm, parseGlmResourcePackagePage, parseGlmStandardBalance, parseMiniMax, teamPlanHeaders, teamPlanKind } from './adapters.js';
 import { resolveOpenAIAdminKey } from './openai-admin.js';
 import { queryOpenAICosts } from './openai-costs.js';
 import { queryOpenAIKeyNames } from './openai-key-names.js';
@@ -13,6 +13,9 @@ const ENDPOINTS = Object.freeze({
   deepseek: 'https://api.deepseek.com/user/balance',
   'glm-cn': 'https://open.bigmodel.cn/api/monitor/usage/quota/limit',
   'zai-coding-plan': 'https://api.z.ai/api/monitor/usage/quota/limit',
+  // GLM Team Plan: the same monitor, routed to the team subscription by type=2.
+  'glm-cn-team': 'https://open.bigmodel.cn/api/monitor/usage/quota/limit?type=2',
+  'zai-coding-plan-team': 'https://api.z.ai/api/monitor/usage/quota/limit?type=2',
   'minimax-cn': 'https://www.minimax.cn/v1/token_plan/remains',
   'glm-standard-balance': 'https://open.bigmodel.cn/api/biz/account/query-customer-account-report',
   'glm-standard-packages': 'https://open.bigmodel.cn/api/biz/tokenAccounts/list/my?pageNum=1&pageSize=50&filterEnabled=false',
@@ -67,8 +70,9 @@ async function readGlmResourcePackages(key, options) {
 }
 
 // Only fixed HTTPS destinations are ever contacted. Redirects and upstream error bodies
-// are deliberately not exposed to the UI or logs.
-export async function readJson(url, key, { fetcher = fetch, signal } = {}) {
+// are deliberately not exposed to the UI or logs. Extra headers are for fixed-scope
+// routing only (GLM Team Plan organization/project) and carry no credentials.
+export async function readJson(url, key, { fetcher = fetch, signal, headers: extraHeaders } = {}) {
   if (!ALLOWED_ENDPOINTS.has(url)) throw failure('unsupported');
   const combined = AbortSignal.any([AbortSignal.timeout(12_000), ...(signal ? [signal] : [])]);
   let response;
@@ -78,7 +82,7 @@ export async function readJson(url, key, { fetcher = fetch, signal } = {}) {
     const bearerAuth = BEARER_ENDPOINTS.has(url);
     response = await fetcher(url, {
       method: 'GET', redirect: 'error', signal: combined,
-      headers: { Authorization: bearerAuth ? `Bearer ${key}` : key, Accept: 'application/json' },
+      headers: { ...(extraHeaders ?? {}), Authorization: bearerAuth ? `Bearer ${key}` : key, Accept: 'application/json' },
     });
   } catch {
     throw failure(combined.aborted ? 'timeout' : 'network');
@@ -111,9 +115,10 @@ export async function readJson(url, key, { fetcher = fetch, signal } = {}) {
 }
 
 export class QuotaManager {
-  constructor(services, { fetcher = fetch, now = Date.now, version = 'unknown', adminKeyResolver = () => resolveOpenAIAdminKey(services.credentials), colorThresholdsProvider = () => DEFAULT_COLOR_THRESHOLDS } = {}) {
+  constructor(services, { fetcher = fetch, now = Date.now, version = 'unknown', adminKeyResolver = () => resolveOpenAIAdminKey(services.credentials), colorThresholdsProvider = () => DEFAULT_COLOR_THRESHOLDS, teamPlansProvider = () => ({}) } = {}) {
     this.services = services;
     this.colorThresholdsProvider = colorThresholdsProvider;
+    this.teamPlansProvider = teamPlansProvider;
     this.adminKeyResolver = adminKeyResolver;
     this.fetcher = fetcher;
     this.now = now;
@@ -163,6 +168,29 @@ export class QuotaManager {
     }
     return undefined;
   }
+  // A Team Plan row is a sibling of a personal Coding Plan row: same provider
+  // key and dashboard, but the monitor is asked for the team subscription. It
+  // exists only when the user enabled it in settings. The organization/project
+  // scope stays on the Host and never reaches the client.
+  teamRow(row) {
+    const kind = teamPlanKind(row.kind);
+    if (!kind) return null;
+    let plans;
+    try { plans = this.teamPlansProvider(); } catch { return null; }
+    const plan = plans?.[row.kind];
+    if (!plan || typeof plan !== 'object') return null;
+    return {
+      id: `${row.id}::team`, name: row.name, kind,
+      ...(row.dashboardUrl ? { dashboardUrl: row.dashboardUrl } : {}),
+      ...(row.blocked ? { blocked: row.blocked } : {}),
+      explicitRef: row.explicitRef, refs: row.refs,
+      ...(row.nativeRecord ? { nativeRecord: row.nativeRecord } : {}),
+      teamPlan: {
+        organizationId: typeof plan.organizationId === 'string' ? plan.organizationId : '',
+        projectId: typeof plan.projectId === 'string' ? plan.projectId : '',
+      },
+    };
+  }
   async discover() {
     const { llm, settings, credentials, deepseekAccount, launchEnvironment } = this.services;
     const directory = await llm.listConfigurableProviders();
@@ -200,7 +228,7 @@ export class QuotaManager {
         classification = { kind: 'unsupported', dashboardUrl: null };
       }
       const authHeaders = Object.keys(profile.headers ?? {}).some(name => /authorization|api[-_]?key|auth[-_]?token/i.test(name));
-      rows.push({
+      const row = {
         id: entry.provider,
         name: safeName(profile.displayName || entry.displayName, entry.provider),
         ...classification,
@@ -210,7 +238,10 @@ export class QuotaManager {
         explicitRef, refs,
         ...(path[0] === 'providers' ? { nativeRecord: `llm-pi-ai/${entry.provider}` } : {}),
         diagnostic: Boolean(entry.error),
-      });
+      };
+      rows.push(row);
+      const team = this.teamRow(row);
+      if (team) rows.push(team);
       seen.add(entry.provider);
     }
     // Registered-only known routes can still be classified, but are queried only
@@ -219,7 +250,10 @@ export class QuotaManager {
       if (seen.has(entry.id) || entry.id === 'deepseek-account') continue;
       const classification = classifyProvider({ provider: entry.id, baseURL: entry.baseURL ?? entry.defaultBaseURL });
       const refs = (entry.nativeAuth?.env ?? []).map(credentialRef).filter(Boolean);
-      rows.push({ id: entry.id, name: safeName(entry.name, entry.id), ...classification, refs });
+      const row = { id: entry.id, name: safeName(entry.name, entry.id), ...classification, refs };
+      rows.push(row);
+      const team = this.teamRow(row);
+      if (team) rows.push(team);
     }
     return rows;
   }
@@ -251,7 +285,11 @@ export class QuotaManager {
       } else {
         key = await this.resolveKey(row);
         if (!key) return { ...base, status: 'missing-credential', source: 'none' };
-        identity = `${row.kind}:${hash(key)}`;
+        // A team row's cache is scoped to its organization/project so a changed
+        // scope never serves the previous project's quota from cache.
+        identity = isTeamPlanKind(row.kind)
+          ? `${row.kind}:${hash(`${key}\u0000${row.teamPlan.organizationId}\u0000${row.teamPlan.projectId}`)}`
+          : `${row.kind}:${hash(key)}`;
       }
     } catch (error) {
       const adminError = ['invalid-admin-key', 'admin-credential-error'].includes(error.code) ? error.code : 'admin-credential-error';
@@ -265,7 +303,7 @@ export class QuotaManager {
     const existing = this.inflight.get(identity);
     if (existing) return { ...base, ...await existing };
     const operation = (async () => {
-      const source = row.kind === 'account' ? 'harness-account' : row.kind === 'codex' ? 'codex-usage' : row.kind === 'openai' ? 'official-costs' : row.kind === 'opencode-go' ? 'opencode-usage' : row.kind === 'minimax-cn' ? 'minimax-plan' : row.kind === 'zai-coding-plan' ? 'zai-plan-usage' : row.kind === 'glm-standard-cn' ? 'glm-standard-api' : row.kind === 'deepseek' ? 'official-balance' : 'provider-monitor';
+      const source = row.kind === 'account' ? 'harness-account' : row.kind === 'codex' ? 'codex-usage' : row.kind === 'openai' ? 'official-costs' : row.kind === 'opencode-go' ? 'opencode-usage' : row.kind === 'minimax-cn' ? 'minimax-plan' : isTeamPlanKind(row.kind) ? 'glm-team-plan-usage' : row.kind === 'zai-coding-plan' ? 'zai-plan-usage' : row.kind === 'glm-standard-cn' ? 'glm-standard-api' : row.kind === 'deepseek' ? 'official-balance' : 'provider-monitor';
       try {
         let metrics;
         if (row.kind === 'codex') {
@@ -312,8 +350,19 @@ export class QuotaManager {
             readGlmResourcePackages(key, options),
           ]);
           metrics = [parseGlmStandardBalance(balanceJson), ...packages];
+        } else if (isTeamPlanKind(row.kind)) {
+          const json = await readJson(ENDPOINTS[row.kind], key, { fetcher: this.fetcher, signal: this.controller.signal, headers: teamPlanHeaders(row.teamPlan) });
+          // Definite states, not outages: the key has no team plan, or the monitor
+          // answered an empty success because no project scope was supplied (it
+          // never picks a default project). Report them instead of a retryable error.
+          if (isGlmNoPlan(json)) throw failure('no-plan');
+          if (isGlmEmptyQuota(json)) throw failure(row.teamPlan.organizationId || row.teamPlan.projectId ? 'no-plan' : 'team-scope-required');
+          metrics = parseGlm(json);
         } else {
           const json = await readJson(ENDPOINTS[row.kind], key, { fetcher: this.fetcher, signal: this.controller.signal });
+          // The personal monitor rejects team keys with a "no coding plan" business
+          // reply; surface it as a state so the user is not sent chasing an error.
+          if ((row.kind === 'glm-cn' || row.kind === 'zai-coding-plan') && isGlmNoPlan(json)) throw failure('no-plan');
           metrics = row.kind === 'deepseek' ? parseDeepSeek(json) : row.kind === 'minimax-cn' ? parseMiniMax(json) : parseGlm(json);
         }
         if (this.disposed) throw failure('disposed');
@@ -321,7 +370,7 @@ export class QuotaManager {
         if (cacheable) this.cache.set(identity, { value, status: 'ok', attemptedAt: time, nextAttemptAt: this.now() + (row.kind === 'openai' ? 900_000 : TTL), touchedAt: this.now() });
         return value;
       } catch (error) {
-        const allowed = ['unauthorized', 'forbidden', 'rate-limited', 'timeout', 'network', 'network-connect', 'network-read', 'invalid-response', 'upstream', 'disposed', 'account-changed', 'codex-auth-required', 'codex-auth-expired', 'unsupported-auth'];
+        const allowed = ['unauthorized', 'forbidden', 'rate-limited', 'timeout', 'network', 'network-connect', 'network-read', 'invalid-response', 'upstream', 'no-plan', 'team-scope-required', 'disposed', 'account-changed', 'codex-auth-required', 'codex-auth-expired', 'unsupported-auth'];
         const status = allowed.includes(error.code || error.message) ? error.code || error.message : 'upstream';
         if (row.kind === 'codex') {
           let scopeFailure = ['account-changed', 'codex-auth-required', 'codex-auth-expired', 'unsupported-auth'].includes(status) ? status : null;

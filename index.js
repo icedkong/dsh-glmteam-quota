@@ -2,7 +2,7 @@ import { QuotaManager } from './src/manager.js';
 import { CodexOAuthController } from './src/codex-oauth.js';
 import { resolveDshRuntimeVersion, resolveHostDshInstallation } from './src/version.js';
 import { describeOpenAIAdminKey, resolveOpenAIAdminKey } from './src/openai-admin.js';
-import { CompanyDomainAliasSettings, QuotaColorSettings } from './src/quota-settings.js';
+import { CompanyDomainAliasSettings, GlmTeamPlanSettings, QuotaColorSettings } from './src/quota-settings.js';
 import { readProviderRouteHosts, nativeDeepSeekEndpointEnvironment } from './src/route-hosts.js';
 import { CompanyRulesManager } from './src/company-rules.js';
 import { createCompanyRulesCache } from './src/company-rules-storage.js';
@@ -74,13 +74,16 @@ export function apply(ctx, config = {}) {
   const domainAliases = new CompanyDomainAliasSettings(config.domainAliases, editor && entry ? async value => {
     await editor.edit(entry, current => ({ ...current, domainAliases: value }));
   } : undefined);
+  const teamPlans = new GlmTeamPlanSettings(config.glmTeamPlans, editor && entry ? async value => {
+    await editor.edit(entry, current => ({ ...current, glmTeamPlans: value }));
+  } : undefined);
   const launchEnvironment = nativeDeepSeekEndpointEnvironment(ctx.get('launchEnvironment'), () => process.env.DEEPSEEK_BASE_URL);
   const installation = resolveHostDshInstallation(ctx.get('profileContext'));
   const catalogGrouping = loadModelCatalogGrouping(installation);
   const manager = new QuotaManager({
     llm: ctx.llm, settings: ctx.settings, credentials: ctx.credentials, launchEnvironment,
     deepseekAccount: ctx.get('deepseekAccount'), agentDefaultModel: ctx.get('agentDefaultModel'),
-  }, { version: resolveDshRuntimeVersion({ installation }), colorThresholdsProvider: () => colors.read().colorThresholds });
+  }, { version: resolveDshRuntimeVersion({ installation }), colorThresholdsProvider: () => colors.read().colorThresholds, teamPlansProvider: () => teamPlans.value });
   ctx.effect(() => () => manager.dispose());
   ctx.provide('providerQuota', manager);
   const codexOAuth = new CodexOAuthController({
@@ -214,7 +217,7 @@ export function apply(ctx, config = {}) {
       return { configured: false, source: null, error: code };
     }
   };
-  const settingsSnapshot = async () => ({ ...colors.browserRead(), ...domainAliases.read(), adminKey: await adminStatus() });
+  const settingsSnapshot = async () => ({ ...colors.browserRead(), ...domainAliases.read(), ...teamPlans.read(), adminKey: await adminStatus() });
   ctx.effect(() => ctx.connection.fetch.register({
     path: '/api/provider-quota-settings', methods: ['GET', 'POST'], requestBody: 'buffered',
     async fetch(request) {
@@ -235,13 +238,18 @@ export function apply(ctx, config = {}) {
           if (!status.configured) throw Object.assign(new Error('save-failed'), { code: 'save-failed' });
           return Response.json({ ...(await settingsSnapshot()), saved: true, savedItem: 'adminKey' }, { headers });
         }
+        if (raw.action === 'saveGlmTeamPlans') {
+          if (!Object.hasOwn(raw, 'glmTeamPlans') || Object.keys(raw).some(key => !['action', 'glmTeamPlans'].includes(key))) throw Object.assign(new Error('invalid-team-plan'), { code: 'invalid-team-plan' });
+          await teamPlans.save(raw.glmTeamPlans);
+          return Response.json({ ...(await settingsSnapshot()), saved: true, savedItem: 'glmTeamPlans' }, { headers });
+        }
         const value = raw.action === undefined ? raw : (() => { throw Object.assign(new Error('invalid-thresholds'), { code: 'invalid-thresholds' }); })();
         await colorOperation({ action: 'set', ...value });
         return Response.json({ ...(await settingsSnapshot()), saved: true, savedItem: 'colorThresholds' }, { headers });
       } catch (cause) {
-        const allowed = ['invalid-thresholds', 'invalid-domain-aliases', 'invalid-admin-key', 'admin-credential-error', 'invalid-request', 'settings-unavailable', 'settings-conflict', 'save-failed'];
+        const allowed = ['invalid-thresholds', 'invalid-domain-aliases', 'invalid-team-plan', 'invalid-admin-key', 'admin-credential-error', 'invalid-request', 'settings-unavailable', 'settings-conflict', 'save-failed'];
         const code = allowed.includes(cause?.code) ? cause.code : 'save-failed';
-        return Response.json({ error: code }, { status: ['invalid-thresholds', 'invalid-domain-aliases', 'invalid-admin-key', 'invalid-request'].includes(code) ? 400 : code === 'settings-conflict' ? 409 : 503, headers });
+        return Response.json({ error: code }, { status: ['invalid-thresholds', 'invalid-domain-aliases', 'invalid-team-plan', 'invalid-admin-key', 'invalid-request'].includes(code) ? 400 : code === 'settings-conflict' ? 409 : 503, headers });
       }
     },
   }));

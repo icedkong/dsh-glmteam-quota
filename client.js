@@ -1,10 +1,10 @@
 window.__ModuleLoader__.load({
-  id: 'dsh-quota-cordis',
+  id: 'dsh-glmteam-quota',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
-    const NS = 'dsh-quota-cordis';
-    const CODEX_NS = 'dsh-quota-cordis-codex';
+    const NS = 'dsh-glmteam-quota';
+    const CODEX_NS = 'dsh-glmteam-quota-codex';
     const POPUP_ID = 'pq-provider-popup';
 
     // BEGIN PURE LAYOUT
@@ -268,7 +268,7 @@ window.__ModuleLoader__.load({
     function quotaTone(row, thresholds = DEFAULT_COLOR_THRESHOLDS) {
       if (!row) return 'idle';
       if (row.stale) return 'warn';
-      if (row.status !== 'ok') return ['unsupported', 'admin-key-required', 'unsupported-auth', 'account-changed', 'codex-auth-required', 'codex-auth-expired'].includes(row.status) ? 'idle' : 'error';
+      if (row.status !== 'ok') return ['unsupported', 'admin-key-required', 'unsupported-auth', 'account-changed', 'codex-auth-required', 'codex-auth-expired', 'no-plan', 'team-scope-required'].includes(row.status) ? 'idle' : 'error';
       const tones = dockMetricItems(row.metrics, thresholds).filter(item => item.metric.type === 'quota-window').map(item => item.tone);
       if (tones.includes('error') || row.metrics.some(metric => metric.type === 'balance' && Number(metric.amount) <= 0 && metric.wallet !== 'bonus')) return 'error';
       return tones.includes('warn') ? 'warn' : 'success';
@@ -535,7 +535,7 @@ window.__ModuleLoader__.load({
     const dictionaries = {
       zh: {
         providerManagerCatalogGroupingSource: '来自内置模型目录，仅用于归组',
-        title: 'DSH Quota+', subtitle: '额度与用量展示面板；多供应商模型管理，增强 DSH 官方授权、可选模型与推理强度。', refresh: '刷新全部', refreshOne: '刷新', loading: '正在查询…', empty: '尚未发现已配置的提供商。请在「模型」标签或官方「模型」设置中添加提供商。',
+        title: 'GLM Quota+', subtitle: '额度与用量展示面板：多提供商余额、订阅额度（含 GLM 团队版套餐）与 OpenAI 组织支出。', refresh: '刷新全部', refreshOne: '刷新', loading: '正在查询…', empty: '尚未发现已配置的提供商。请在官方「模型」设置中添加提供商。',
         api: 'API 余额与支出', subscription: '订阅额度', account: 'App 登录账户', current: '当前提供商额度', details: '额度详情', close: '关闭额度详情',
         balance: '可用余额', recharge: '充值余额', bonus: '赠送余额', rolling: '五小时', weekly: '周限', monthly: '月度', mcp: 'MCP 工具', quota: '额度窗口',
         used: '已用', left: '剩余', credits: '积分', codexCredits: 'Credits 余额', codexCreditsUnlimited: '不限额', codexCreditsAvailable: '可用（余额未提供）', codexCreditsUnavailable: '无可用 Credits', codexCreditsNotProvided: '未提供', codexCreditsNote: '账户用量积分，可能与其他功能共享；非 OpenAI API 余额。', tokens: 'Tokens', requests: '次', percent: '百分比', next: '重置于', updated: '更新于', stale: '数据已过期', staleDetail: '查询未成功，以下为上次成功数据。', never: '尚无成功数据', dashboard: '官方控制台', 'zai-api-billing-dashboard': '账单控制台', 'zai-plan-dashboard': '套餐用量',
@@ -543,15 +543,17 @@ window.__ModuleLoader__.load({
         ok: '已更新', unsupported: '尚不支持此提供商或中转端点；不会自动向官方发送其凭据。', 'zai-api-status-only': '这是 Z.AI 国际普通 API 路由（/api/paas/v4），不是 Coding Plan，因此不会查询 Coding Plan 订阅额度。国际站普通 API 账户接口尚未验证；请在对应控制台查看。', 'admin-key-required': '未找到 Admin Key。请在「额度」中选择 OpenAI 后输入并保存；不会使用模型调用 Key 查询费用。', 'invalid-admin-key': 'Admin Key 格式无效，需要 sk-admin- 开头的组织管理密钥；不会回退到其他密钥。', 'admin-credential-error': 'DSH 凭据服务暂不可用；请稍后重试。', adminTitle: 'OpenAI Admin Key', adminIntro: '用于查询 OpenAI 官方组织支出及可选的 API Key 名称。该凭据独立保存在 DSH 安全凭据存储中，不会替代模型调用 Key。', adminHowToGetKey: '在 OpenAI Platform 的 Organization → Settings → Admin keys 中创建（需组织所有者权限）：', adminGetKeyLink: '打开 Admin Key 设置页', adminChecking: '正在读取 Admin Key 配置状态…', adminKeyLabel: 'Admin Key', adminKeyPlaceholder: '输入 sk-admin-… 组织管理密钥', adminConfigured: '已配置 OpenAI Admin Key；出于安全考虑不会显示密钥内容。', adminMissing: '尚未配置 Admin Key。', adminSourceCredential: '当前从 DSH 凭据服务读取。', adminSave: '安全保存 Admin Key', adminSaved: 'Admin Key 已保存并确认可用。', adminSaveFailed: '未能确认 Admin Key 已安全保存，请刷新状态后重试。', adminUseOfficial: '仅官方 OpenAI API 路由可使用此设置。花费显示组织总支出，不按单一模型路由归因。', spendShort: '本月支出', organization: '整个组织，非当前路由专属', noRecords: '该时间段暂无账单记录', 'official-costs': 'OpenAI 官方 Costs API',
         'missing-credential': '未找到该路由使用的有效 API Key，请检查模型设置。', 'unsupported-auth': '此认证方式暂不支持。Codex 仅支持内置 openai-codex 的订阅授权，请检查「设置 → Codex 授权」；不会读取其他授权记录或猜测认证方式。', unauthorized: '认证失败（401），请检查该区域的 API Key。', forbidden: '无查询权限（403），请检查账户与套餐。', 'rate-limited': '提供商限流，已暂停重试约 2 分钟。', timeout: '查询超时，稍后可重试。', network: '无法连接提供商，请检查网络。', 'network-connect': '无法建立到 OpenCode Go 用量接口的请求连接。', 'network-read': '已收到 OpenCode Go 响应，但读取响应流时连接中断。', 'invalid-response': '额度响应暂无法识别，请以官方控制台为准。', upstream: '提供商查询失败或尚未订阅，请以官方控制台为准。',
         'account-changed': '账户身份正在更新，本次余额已丢弃；请稍后刷新。', serviceError: '额度服务暂不可用，请刷新页面后重试。', 'official-balance': '官方余额 API', 'glm-standard-api': 'GLM 普通 API 账户与资源包接口', 'provider-monitor': '提供商监控端点 · 个人套餐', 'zai-plan-usage': 'Z.AI 官方 Coding Plan 配额接口', 'harness-account': 'Harness 账户服务', 'opencode-usage': 'OpenCode 官方用量接口', none: '暂未查询',
-        colorsTab: '设置', providerSettingsTab: '额度', providerManagerTab: '模型', providerSettingsTitle: '按提供商查看额度', providerSettingsIntro: '点击提供商查看额度状态和已配置路由。提供商配置、模型目录和 API Key 请在「模型」标签中管理。高级设置仍在官方「模型」页。', providerSettingsBack: '返回提供商列表', providerRoutes: '已配置路由', lowestRemaining: '最低剩余额度', routesNeedAttention: '需关注路由', providerNoQuota: '暂无百分比配额', providerAdditionalSettings: '其他设置', providerSettingsNoExtra: '此提供商暂无可在本页编辑的额外设置。', companyOpenAI: 'OpenAI', companyDeepSeek: 'DeepSeek', companyGlm: 'GLM / Z.AI', companyMiniMax: 'MiniMax', companyOpenCode: 'OpenCode', companyOther: '其他 / 自定义', settingsTitle: '订阅颜色阈值', settingsIntro: '在此直接调整数值并保存，无需编辑配置文件。每个订阅窗口独立计算，现金余额颜色不受影响。', greenMin: '绿色最低剩余百分比', orangeMin: '橙色最低剩余百分比', thresholdRules: '剩余 ≥ 绿色阈值为绿色；否则剩余 ≥ 橙色阈值为橙色；其余为红色。颜色固定跟随主题，不可编辑。', save: '保存设置', defaults: '恢复默认到草稿', saved: '设置已保存并回读确认。', settingsLoading: '正在读取设置…', readOnly: '当前配置不可写；可以查看，但不能保存。', settingsRefresh: '重新载入已保存值', defaultsNote: '默认绿色 50%、橙色 25%。恢复默认只修改草稿，仍需点击保存。',
+        colorsTab: '设置', providerSettingsTab: '额度', providerManagerTab: '模型', providerSettingsTitle: '按提供商查看额度', providerSettingsIntro: '点击提供商查看额度状态和已配置路由。提供商配置、模型目录和 API Key 请在官方「模型」页管理。', providerSettingsBack: '返回提供商列表', providerRoutes: '已配置路由', lowestRemaining: '最低剩余额度', routesNeedAttention: '需关注路由', providerNoQuota: '暂无百分比配额', providerAdditionalSettings: '其他设置', providerSettingsNoExtra: '此提供商暂无可在本页编辑的额外设置。', companyOpenAI: 'OpenAI', companyDeepSeek: 'DeepSeek', companyGlm: 'GLM / Z.AI', companyMiniMax: 'MiniMax', companyOpenCode: 'OpenCode', companyOther: '其他 / 自定义', settingsTitle: '订阅颜色阈值', settingsIntro: '在此直接调整数值并保存，无需编辑配置文件。每个订阅窗口独立计算，现金余额颜色不受影响。', greenMin: '绿色最低剩余百分比', orangeMin: '橙色最低剩余百分比', thresholdRules: '剩余 ≥ 绿色阈值为绿色；否则剩余 ≥ 橙色阈值为橙色；其余为红色。颜色固定跟随主题，不可编辑。', save: '保存设置', defaults: '恢复默认到草稿', saved: '设置已保存并回读确认。', settingsLoading: '正在读取设置…', readOnly: '当前配置不可写；可以查看，但不能保存。', settingsRefresh: '重新载入已保存值', defaultsNote: '默认绿色 50%、橙色 25%。恢复默认只修改草稿，仍需点击保存。',
         'invalid-thresholds': '请输入非空整数，满足 0 ≤ 橙色阈值 < 绿色阈值 ≤ 100。', 'settings-unavailable': '额度设置暂不可用，请重新载入后重试。', 'settings-conflict': '设置已变化，保存未获确认。请重新载入后重试。', 'save-failed': '保存未获确认，请重新载入检查实际已保存值。', settingsForbidden: '设置校验已过期或无写入权限，请重新载入后重试。',
         'codex-usage': 'Codex 订阅用量', 'codex-auth-required': '尚未保存 Codex 订阅授权，请在「设置 → Codex 授权」中登录。', 'codex-auth-expired': 'Codex 订阅授权已过期。可正常使用内置 openai-codex 模型让原生适配器续期，或前往「设置 → Codex 授权」重新登录；本插件不会自动续期或发起推理。',
         note: '余额 / 额度约 2 分钟刷新，组织费用缓存 15 分钟。隐藏页面时暂停；密钥仅在 Host 使用。', notFound: '当前提供商尚无额度数据', counts: '用量 / 总额', sourceDetails: '数据说明', route: '提供商路由', exact: '精确金额', cnPlan: 'GLM Coding · 国内', accountName: 'DeepSeek 登录账户',
+        teamPlan: '团队版', personalPlan: '个人版', remainingQuota: '剩余额度', more: '更多', planSwitch: '切换套餐', 'glm-team-plan-usage': 'GLM 官方团队版 Coding Plan 配额接口', 'no-plan': '该 Key 没有有效的 GLM Coding Plan 个人套餐。若这是团队版 Key，请在下方启用「GLM 团队版套餐」。', 'no-team-plan': '该 Key 不属于任何 GLM 团队版套餐，或该团队项目当前没有额度数据。请核对组织 / 项目 ID，或关闭团队版查询。', 'team-scope-required': '团队接口不会自动选择项目：请在此卡片中填写组织 ID 与项目 ID 后保存，才会返回额度。',
+        glmTeamPlanTitle: 'GLM 团队版套餐', glmTeamPlanIntro: '为下方每条 GLM Coding Plan 路由查询团队版套餐额度。使用路由自身的 API Key 请求官方团队版接口（type=2）；组织 / 项目 ID 仅作为 bigmodel-organization / bigmodel-project 请求头发送，不会出现在页面中。', glmTeamPlanEnable: '查询团队版额度', glmTeamPlanOrg: '组织 ID（Organization ID）', glmTeamPlanProject: '项目 ID（Project ID）', glmTeamPlanOrgPlaceholder: '团队 / 组织 ID', glmTeamPlanProjectPlaceholder: '项目 ID', glmTeamPlanHint: '通常必须同时填写两者：接口在未指定项目时返回空数据，不会自动选择默认项目。ID 对应智谱开放平台中团队（组织）与项目的标识；可在官网团队用量页的浏览器网络请求里查看 bigmodel-organization / bigmodel-project 请求头的值。', glmTeamPlanOff: '未启用：不会发送团队版请求。', glmTeamPlanOn: '已启用：额度页将多出一条「团队版」路由。', glmTeamPlanSave: '保存团队版设置', glmTeamPlanChecking: '正在读取团队版设置…', glmTeamPlanSaved: '团队版设置已保存并回读确认。', glmTeamPlanError: '团队版设置暂不可用，请重新载入后重试。', 'invalid-team-plan': '组织 ID 与项目 ID 需同时填写或同时留空，且各不超过 128 个可打印 ASCII 字符。',
       },
       en: {
         providerManagerCatalogGroupingSource: 'Built-in model catalog; for grouping only',
-        title: 'DSH Quota+', subtitle: 'Quota and usage dashboard; multi-provider model management that extends DSH’s official authorization, model selection and reasoning effort.', refresh: 'Refresh all', refreshOne: 'Refresh', loading: 'Checking…', empty: 'No configured providers found. Add one in the Models tab or official Models settings.',
-        colorsTab: 'Settings', providerSettingsTab: 'Quotas', providerManagerTab: 'Models', providerSettingsTitle: 'Quotas by provider', providerSettingsIntro: 'Select a provider to review quota status and configured routes. Manage provider configurations, model catalogs, and API keys on the Models tab. Advanced settings remain on the official Models page.', providerSettingsBack: 'Back to providers', providerRoutes: 'Configured routes', lowestRemaining: 'Lowest remaining quota', routesNeedAttention: 'Routes needing attention', providerNoQuota: 'No percentage quota available', providerAdditionalSettings: 'Additional settings', providerSettingsNoExtra: 'There are no additional settings for this provider here.', companyOpenAI: 'OpenAI', companyDeepSeek: 'DeepSeek', companyGlm: 'GLM / Z.AI', companyMiniMax: 'MiniMax', companyOpenCode: 'OpenCode', companyOther: 'Other / custom', settingsTitle: 'Subscription color thresholds', settingsIntro: 'Edit and save the values here without opening a configuration file. Each subscription window is evaluated independently; cash colors are unchanged.', greenMin: 'Minimum remaining percentage for green', orangeMin: 'Minimum remaining percentage for orange', thresholdRules: 'Remaining ≥ green threshold is green; otherwise remaining ≥ orange threshold is orange; the rest is red. Colors are fixed theme colors and cannot be edited.', save: 'Save settings', defaults: 'Restore defaults to draft', saved: 'Settings saved and confirmed by reading them back.', settingsLoading: 'Loading settings…', readOnly: 'This configuration is read-only. Values can be viewed but not saved.', settingsRefresh: 'Reload saved values', defaultsNote: 'Defaults are green 50%, orange 25%. Restoring defaults only edits the draft; click Save to persist.',
+        title: 'GLM Quota+', subtitle: 'Quota and usage dashboard: multi-provider balances, subscription quotas (incl. GLM Team Plan) and OpenAI organization spend.', refresh: 'Refresh all', refreshOne: 'Refresh', loading: 'Checking…', empty: 'No configured providers found. Add one in the official Models settings.',
+        colorsTab: 'Settings', providerSettingsTab: 'Quotas', providerManagerTab: 'Models', providerSettingsTitle: 'Quotas by provider', providerSettingsIntro: 'Select a provider to review quota status and configured routes. Manage provider configurations, model catalogs, and API keys on the official Models page.', providerSettingsBack: 'Back to providers', providerRoutes: 'Configured routes', lowestRemaining: 'Lowest remaining quota', routesNeedAttention: 'Routes needing attention', providerNoQuota: 'No percentage quota available', providerAdditionalSettings: 'Additional settings', providerSettingsNoExtra: 'There are no additional settings for this provider here.', companyOpenAI: 'OpenAI', companyDeepSeek: 'DeepSeek', companyGlm: 'GLM / Z.AI', companyMiniMax: 'MiniMax', companyOpenCode: 'OpenCode', companyOther: 'Other / custom', settingsTitle: 'Subscription color thresholds', settingsIntro: 'Edit and save the values here without opening a configuration file. Each subscription window is evaluated independently; cash colors are unchanged.', greenMin: 'Minimum remaining percentage for green', orangeMin: 'Minimum remaining percentage for orange', thresholdRules: 'Remaining ≥ green threshold is green; otherwise remaining ≥ orange threshold is orange; the rest is red. Colors are fixed theme colors and cannot be edited.', save: 'Save settings', defaults: 'Restore defaults to draft', saved: 'Settings saved and confirmed by reading them back.', settingsLoading: 'Loading settings…', readOnly: 'This configuration is read-only. Values can be viewed but not saved.', settingsRefresh: 'Reload saved values', defaultsNote: 'Defaults are green 50%, orange 25%. Restoring defaults only edits the draft; click Save to persist.',
         'invalid-thresholds': 'Enter non-empty integers satisfying 0 ≤ orange < green ≤ 100.', 'settings-unavailable': 'Quota settings are unavailable. Reload and try again.', 'settings-conflict': 'Settings changed; saving was not confirmed. Reload and try again.', 'save-failed': 'Saving was not confirmed. Reload to check the actual saved values.', settingsForbidden: 'The settings check expired or write access is unavailable. Reload and try again.',
         'codex-usage': 'Codex subscription usage', 'codex-auth-required': 'No Codex subscription grant is saved. Sign in under Settings → Codex authorization.', 'codex-auth-expired': 'The Codex grant expired. Normal use of the built-in openai-codex model lets its native adapter renew it, or sign in again under Settings → Codex authorization. This plugin never refreshes grants or sends inference probes.',
         api: 'API balances & spend', subscription: 'Subscriptions', account: 'App account', current: 'Current provider quota', details: 'Quota details', close: 'Close quota details',
@@ -561,6 +563,8 @@ window.__ModuleLoader__.load({
         'official-costs': 'Official OpenAI Costs API',
         'missing-credential': 'No valid API key was found for this route. Check Models settings.', 'unsupported-auth': 'This authentication method is unsupported. Codex requires the built-in openai-codex subscription grant; check Settings → Codex authorization. Other grants are not read and authentication is never guessed.', unauthorized: 'Authentication failed (401). Check the key and region.', forbidden: 'Quota access denied (403). Check the account and plan.', 'rate-limited': 'Rate limited. Retrying is paused for about 2 minutes.', timeout: 'The quota query timed out. Try again later.', network: 'Could not reach the provider. Check the network.', 'network-connect': 'Could not establish the OpenCode Go usage request connection.', 'network-read': 'OpenCode Go responded, but its response stream was interrupted.', 'invalid-response': 'Unrecognized quota response. Check the official dashboard.', upstream: 'Quota query failed or no active plan. Check the official dashboard.',
         'account-changed': 'Account identity is changing. This balance was discarded; refresh shortly.', serviceError: 'Quota service is unavailable. Reload the page and try again.', 'official-balance': 'Official balance API', 'glm-standard-api': 'GLM Standard API account and package endpoints', 'provider-monitor': 'Provider monitor · Personal plan', 'zai-plan-usage': 'Official Z.AI Coding Plan quota API', 'harness-account': 'Harness account service', 'opencode-usage': 'OpenCode usage API', none: 'Not queried', note: 'Balances / quotas refresh about every 2 minutes; organization costs cache for 15 minutes. Paused while hidden. Keys stay on the Host.', notFound: 'No quota data for the current provider', counts: 'Used / total', sourceDetails: 'Data details', route: 'Provider route', exact: 'Exact amount', cnPlan: 'GLM Coding · China', accountName: 'DeepSeek account',
+        teamPlan: 'Team', personalPlan: 'Personal', remainingQuota: 'Remaining quota', more: 'More', planSwitch: 'Switch plan', 'glm-team-plan-usage': 'Official GLM Team Plan quota API', 'no-plan': 'This key has no active GLM Coding Plan personal subscription. If it is a Team Plan key, enable GLM Team Plan below.', 'no-team-plan': 'This key belongs to no GLM Team Plan, or that team project has no quota data. Check the organization / project IDs, or turn the team query off.', 'team-scope-required': 'The team endpoint does not pick a project by itself: enter both the organization and project IDs in this card and save before quota is returned.',
+        glmTeamPlanTitle: 'GLM Team Plan', glmTeamPlanIntro: 'Query Team Plan quota for each GLM Coding Plan route below. The route’s own API key is used against the official team endpoint (type=2); the organization / project IDs are only sent as bigmodel-organization / bigmodel-project headers and are never shown on this page.', glmTeamPlanEnable: 'Query Team Plan quota', glmTeamPlanOrg: 'Organization ID', glmTeamPlanProject: 'Project ID', glmTeamPlanOrgPlaceholder: 'Team / organization ID', glmTeamPlanProjectPlaceholder: 'Project ID', glmTeamPlanHint: 'Both are normally required: without a project scope the endpoint returns empty data instead of choosing a default project. The IDs identify the team (organization) and project on the BigModel platform; the official team usage page sends them as bigmodel-organization / bigmodel-project request headers, visible in the browser network panel.', glmTeamPlanOff: 'Off: no team request is sent.', glmTeamPlanOn: 'On: an extra Team route appears on the Quotas tab.', glmTeamPlanSave: 'Save Team Plan settings', glmTeamPlanChecking: 'Loading Team Plan settings…', glmTeamPlanSaved: 'Team Plan settings saved and confirmed by reading them back.', glmTeamPlanError: 'Team Plan settings are unavailable. Reload and try again.', 'invalid-team-plan': 'Enter both the organization and project IDs or leave both empty; up to 128 printable ASCII characters each.',
       },
     };
     const providerManagerStrings = {
@@ -686,6 +690,12 @@ window.__ModuleLoader__.load({
 .pq-dock{display:flex;min-width:0;max-width:100%;padding:1px 4px;height:30px;box-sizing:border-box;align-items:center}.pq-trigger{display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:100%;height:28px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;padding:3px 9px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:20px;cursor:pointer;text-align:left}.pq-trigger:hover,.pq-trigger[aria-expanded=true]{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-border-l2)}.pq-trigger-name{max-width:125px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:0 1 auto}.pq-trigger-value{font-weight:500;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-primary);min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1 1 auto}.pq-summary-item[data-tone=success]{color:var(--dsw-alias-state-success-primary)}.pq-summary-item[data-tone=warn]{color:var(--dsw-alias-state-warn-primary)}.pq-summary-item[data-tone=error]{color:var(--dsw-alias-state-error-primary)}.pq-summary-separator{color:var(--dsw-alias-label-secondary)}.pq-chevron{width:12px;height:12px;flex:none;transition:transform .12s}.pq-trigger[aria-expanded=true] .pq-chevron{transform:rotate(180deg)}
 .pq-popup{position:fixed;display:flex;flex-direction:column;pointer-events:auto;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 32px color-mix(in srgb,var(--dsw-alias-label-primary) 12%,transparent)}.pq-popup-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--dsw-alias-border-l1);flex:none}.pq-popup-actions{display:flex;align-items:center;gap:6px}.pq-close{font-size:20px;line-height:20px;width:30px;height:30px;padding:2px;border-color:transparent;background:transparent}.pq-popup-scroll{overflow:auto;overscroll-behavior:contain;min-height:0}.pq-popup .pq-row{border:none;border-radius:0;background:transparent;margin:0;padding:0 16px 16px}.pq-popup .pq-metrics{grid-template-columns:1fr;margin-top:12px}.pq-popup .pq-amount{font-size:27px}.pq-popup .pq-tags{margin-top:14px}.pq-popup .pq-name{font-size:14px}.pq-popup .pq-meta{margin-top:12px}
 .pq-tabs{display:flex;gap:8px;border-bottom:1px solid var(--dsw-alias-border-l1);margin-bottom:20px}.pq-tab{font:inherit;font-size:13px;padding:8px 12px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.pq-tab[aria-selected=true]{border-bottom-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary);font-weight:600}.pq-tab:focus-visible,.pq-tab-panel:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}.pq-provider-settings{max-width:980px}.pq-provider-cell-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin-top:16px}.pq-provider-cell{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-width:0;min-height:76px;padding:14px 16px;text-align:left;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer}.pq-provider-cell:hover{border-color:var(--dsw-alias-border-l2)}.pq-provider-cell:focus-visible,.pq-provider-back:focus-visible,.pq-provider-settings h3:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}.pq-provider-icon{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;color:var(--dsw-alias-label-primary)}.pq-provider-icon svg{display:block;width:24px;height:24px;overflow:visible}.pq-provider-icon-fallback{border-radius:50%;background:var(--dsw-alias-bg-layer-1);font-size:14px;font-weight:700}.pq-provider-cell-main{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0}.pq-provider-cell-title{overflow-wrap:anywhere}.pq-provider-cell-hosts{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}.pq-provider-cell-host{display:inline-block;max-width:100%;padding:1px 5px;border-radius:4px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.5;overflow-wrap:anywhere}.pq-provider-cell-chevron{flex:none;color:var(--dsw-alias-label-secondary);font-size:20px}.pq-provider-back{margin-bottom:12px}.pq-page h3.pq-provider-detail-title{margin:4px 0 6px;font-size:16px}.pq-provider-routes-title{margin:22px 0 10px;font-size:14px}.pq-provider-route{margin:0 0 12px;padding:14px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1)}.pq-provider-route-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 14px;min-width:0}.pq-provider-route-heading strong,.pq-provider-route-heading code{overflow-wrap:anywhere}.pq-provider-route-heading code{font-size:11px;color:var(--dsw-alias-label-secondary)}.pq-provider-route>.pq-row{margin:12px 0 0;padding:12px;border:1px solid var(--dsw-alias-border-l1)}.pq-admin-panel{box-sizing:border-box;max-width:660px;padding:16px 18px;margin:0 0 14px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1)}.pq-admin-route{display:inline-flex;margin:6px 6px 4px 0}.pq-admin-key-help{margin:8px 0 12px}.pq-admin-key-help .pq-link{text-decoration:underline}.pq-admin-key-status{display:flex;align-items:center;gap:8px;margin:12px 0 0}.pq-admin-key-configured{color:var(--dsw-alias-state-success-primary)}.pq-admin-form{margin-top:14px}.pq-admin-panel .pq-settings-input{max-width:440px}.pq-threshold-panel{box-sizing:border-box;margin:0 0 24px;padding:16px 18px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1)}.pq-threshold-panel .pq-top{margin-bottom:0}.pq-threshold-panel h3{margin:0 0 6px;font-size:14px;font-weight:600}.pq-settings-form{max-width:520px;margin-top:12px}.pq-settings-label{display:block;font-size:13px;font-weight:500;margin:16px 0 6px}.pq-settings-input{box-sizing:border-box;width:100%;max-width:220px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit}.pq-settings-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}.pq-settings-input:disabled{opacity:.55}.pq-settings-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.pq-team-plan-kind{margin:16px 0 0;padding:12px 14px 14px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px}.pq-team-plan-kind legend{padding:0 6px;font-size:13px;font-weight:600}.pq-team-plan-check{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;font-weight:500}.pq-team-plan-kind .pq-settings-label{margin-top:12px}
+.pq-popup-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0}.pq-popup-title .pq-name{font-size:16px;font-weight:600}
+.pq-seg{display:inline-flex;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;overflow:hidden}.pq-seg-item{font:inherit;font-size:12px;line-height:20px;padding:3px 10px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.pq-seg-item.is-active{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-weight:600}.pq-seg-item:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}
+.pq-icon-button{width:30px;height:30px;padding:2px;border-color:transparent;background:transparent;font-size:16px;line-height:20px}.pq-more{font-size:13px;text-decoration:none;white-space:nowrap}
+.pq-popup-card{padding:14px 16px 14px}.pq-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 22px}.pq-card-label{font-size:13px;color:var(--dsw-alias-label-secondary)}.pq-card-value{display:flex;align-items:baseline;gap:4px;margin-top:6px;font-variant-numeric:tabular-nums}.pq-card-value strong{font-size:18px;font-weight:600;line-height:1.3}.pq-card-sub{font-size:12px;color:var(--dsw-alias-label-secondary)}.pq-card-track{margin:10px 0 6px;height:6px}.pq-card-footnote{font-size:12px;color:var(--dsw-alias-label-secondary)}.pq-popup-foot{margin-top:14px;padding-top:10px;border-top:1px solid var(--dsw-alias-border-l1)}
+.pq-trigger-ring{flex:none;display:inline-flex;align-items:center;gap:6px;padding:1px 8px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;line-height:20px;white-space:nowrap;cursor:pointer}.pq-trigger-ring:hover,.pq-trigger-ring[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.pq-trigger-ring:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}.pq-ring{flex:none}.pq-ring-track{fill:none;stroke:var(--dsw-alias-border-l3);stroke-width:2px}.pq-ring-fill{fill:none;stroke-width:2px;stroke-linecap:round}
 .pq-provider-route .pq-row{border:0;border-radius:0;background:transparent;padding:0;margin:0}@media(max-width:520px){.pq-page{padding:16px}.pq-metrics{grid-template-columns:1fr}.pq-row{padding:14px}.pq-trigger-name{max-width:100px}.pq-trigger{gap:6px}.pq-metric{padding:12px 14px}}.pq-company-search{display:grid;gap:8px;margin:16px 0}.pq-company-search label{font-size:13px;font-weight:600}.pq-company-search-row{display:flex;align-items:center;gap:8px}.pq-company-search input{box-sizing:border-box;flex:1;min-width:0;width:100%;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);padding:9px 12px;font:inherit;font-size:13px}.pq-company-search input::placeholder{color:var(--dsw-alias-label-secondary)}.pq-company-search input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}.pq-company-search-status{margin:0;color:var(--dsw-alias-label-secondary);font-size:12px}.pq-manager{max-width:980px;padding:0}.pq-manager-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}.pq-manager-heading-actions,.pq-manager-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pq-manager-heading-title{font-size:14px;font-weight:600}.pq-manager-error-stage{display:block;margin-top:4px}.pq-manager h3{margin:8px 0 6px}.pq-manager-card{min-width:0;padding:14px;margin-top:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1)}.pq-manager-provider-list{display:grid;gap:12px;margin-top:16px}.pq-manager-provider-entry{margin:0}.pq-manager-provider-entry-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.pq-manager-provider-identity{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}.pq-manager-provider-identity strong{overflow-wrap:anywhere}.pq-manager-provider-identity code,.pq-manager-readonly-route code{overflow-wrap:anywhere;color:var(--dsw-alias-label-secondary);font-size:11px}.pq-manager-state{flex:none;padding:2px 7px;border:1px solid var(--dsw-alias-border-l1);border-radius:999px;color:var(--dsw-alias-label-secondary);font-size:11px}.pq-manager-state[data-tone=success]{color:var(--dsw-alias-state-success-primary)}.pq-manager-state[data-tone=warn]{color:var(--dsw-alias-state-warn-primary)}.pq-manager-meta,.pq-manager-note{margin:8px 0 0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.pq-manager-diagnostics{margin-top:10px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px}.pq-manager-diagnostics summary{cursor:pointer;font-size:12px;font-weight:600}.pq-manager-diagnostics summary:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}.pq-manager-diagnostic-list{display:grid;grid-template-columns:minmax(120px,1fr) 1fr;gap:6px 12px;margin:10px 0 0;font-size:12px;line-height:1.5}.pq-manager-diagnostic-list>div{display:contents}.pq-manager-diagnostic-list dt{color:var(--dsw-alias-label-secondary)}.pq-manager-diagnostic-list dd{margin:0;overflow-wrap:anywhere;color:var(--dsw-alias-label-primary)}@media(max-width:520px){.pq-manager-diagnostic-list{grid-template-columns:minmax(0,1fr)}.pq-manager-diagnostic-list dd{margin:0 0 6px}}.pq-manager-alert,.pq-manager-error{padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}.pq-manager-alert{color:var(--dsw-alias-state-warn-primary)}.pq-manager-error{color:var(--dsw-alias-state-error-primary)}.pq-manager-danger{color:var(--dsw-alias-state-error-primary)}.pq-manager-primary{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-border-l2)}.pq-manager-add-row{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-top:12px}.pq-manager-field{display:flex;flex:1 1 220px;flex-direction:column;gap:5px;min-width:0;margin:12px 0;color:var(--dsw-alias-label-primary);font-size:12px}.pq-manager-field>span{font-weight:500}.pq-manager-field input,.pq-manager-field select{box-sizing:border-box;width:100%;min-height:36px;padding:7px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}.pq-manager-field input:focus-visible,.pq-manager-field select:focus-visible,.pq-manager-check input:focus-visible,.pq-manager-candidate input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}.pq-manager-field input[aria-invalid=true]{border-color:var(--dsw-alias-state-error-primary)}.pq-manager-readonly-route{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:14px 0;padding:10px;border-radius:8px;background:var(--dsw-alias-bg-layer-2)}.pq-manager-model-section{margin-top:20px;padding-top:14px;border-top:1px solid var(--dsw-alias-border-l1)}.pq-manager-model-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.pq-manager-model-heading h4{margin:0;font-size:14px}.pq-manager-check{display:inline-flex;align-items:center;gap:7px;margin:10px 14px 2px 0;color:var(--dsw-alias-label-secondary);font-size:12px}.pq-manager-check input,.pq-manager-candidate input{accent-color:var(--dsw-alias-brand-primary)}.pq-manager-model-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px;margin-top:12px}.pq-manager-model{min-width:0;margin:0;padding:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:9px}.pq-manager-model legend,.pq-manager-modalities legend{padding:0 4px;color:var(--dsw-alias-label-secondary);font-size:11px}.pq-manager-model .pq-manager-field{margin:8px 0}.pq-manager-model-numbers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pq-manager-modalities{display:flex;flex-wrap:wrap;gap:3px 8px;min-width:0;margin:10px 0;padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px}.pq-manager-remove-model{display:block;margin-left:auto}.pq-manager-discovery{margin:12px 0;padding:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-layer-2)}.pq-manager-discovery>strong{font-size:12px}.pq-manager-candidate-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:6px;margin:10px 0}.pq-manager-candidate{display:flex;align-items:flex-start;gap:8px;min-width:0;padding:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;font-size:12px;overflow-wrap:anywhere}.pq-manager-candidate>span{display:flex;flex-direction:column;gap:3px;min-width:0}.pq-manager-candidate small{color:var(--dsw-alias-label-secondary)}.pq-manager-footer{justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l1)}@media(max-width:520px){.pq-manager{padding:12px}.pq-manager-model-numbers{grid-template-columns:1fr}.pq-provider-settings-toolbar{align-items:stretch}.pq-provider-manage-button{align-self:flex-start}}@media(prefers-reduced-motion:reduce){.pq-chevron{transition:none}}
 .pq-manager-form-section{padding:12px 0;border-top:1px solid var(--dsw-alias-border-l1)}.pq-manager-form-section h4{font-size:12px;font-weight:500;margin:0 0 8px;color:var(--dsw-alias-label-secondary)}.pq-manager-connection{padding:12px 0;border-top:1px solid var(--dsw-alias-border-l1)}.pq-manager-connection>summary{font-size:12px;font-weight:500;cursor:pointer;color:var(--dsw-alias-label-secondary)}.pq-manager-connection>summary:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}.pq-manager-connection-fields{display:grid;gap:8px;padding-top:12px}.pq-manager-model-section{border-top:1px solid var(--dsw-alias-border-l1);padding-top:12px}.pq-manager-model-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.pq-manager-filter{flex:1;min-width:120px}.pq-manager-model-row input,.pq-manager-filter input{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;padding:5px 8px;font:inherit;font-size:12px;line-height:20px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary)}.pq-manager-model-row input:focus-visible,.pq-manager-filter input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}.pq-manager-model-row input[aria-invalid=true]{border-color:var(--dsw-alias-state-error-primary)}.pq-manager-editor .pq-manager-model{container:pq-model-row / inline-size;min-inline-size:0;padding:8px;margin:0;border:1px solid var(--dsw-alias-border-l1);border-radius:8px}.pq-manager-model-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto auto;align-items:center;gap:6px}.pq-manager-model-id,.pq-manager-model-name{display:flex;flex-direction:column;gap:4px;min-width:0}.pq-manager-model-name-label{display:none}.pq-manager-model-row .pq-button{padding:4px 7px;line-height:20px}.pq-manager-model-row .pq-manager-remove-model{margin:0;justify-self:auto}.pq-manager-editor .pq-manager-model-advanced{min-width:0;border:0;margin:0;padding:12px 2px 2px}.pq-manager-model-advanced[hidden]{display:none}.pq-manager-model-error{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.pq-manager-model-error .pq-manager-error{flex:1;min-width:0}.pq-manager-model-row input:disabled{opacity:.65}.pq-manager-model-section>.pq-manager-note{margin:8px 0}.pq-manager-model-count{font-weight:400;color:var(--dsw-alias-label-secondary);font-size:12px}.pq-manager-editor .pq-manager-footer{border-top:1px solid var(--dsw-alias-border-l1);padding-top:14px;justify-content:flex-end}
 @container pq-model-row (max-width:440px){.pq-manager-model-row{grid-template-columns:minmax(0,1fr) auto auto}.pq-manager-model-id{grid-column:1;grid-row:1}.pq-manager-model-name{display:none;grid-column:1/-1;grid-row:2}.pq-manager-model-row[data-expanded=true] .pq-manager-model-name{display:flex}.pq-manager-model-name-label{display:block;font-size:12px;color:var(--dsw-alias-label-secondary)}.pq-manager-model-toggle{grid-column:2;grid-row:1}.pq-manager-model-row .pq-manager-remove-model{grid-column:3;grid-row:1}}
@@ -722,47 +732,6 @@ window.__ModuleLoader__.load({
         ctx.effect(() => ctx.locale.register(CODEX_NS, codexDictionaries));
         const t = ctx.locale.bind(NS);
         const codexT = ctx.locale.bind(CODEX_NS);
-        let companyRulesCsrf = null;
-        const requestCompanyRules = async (refresh, signal) => {
-          const combined = AbortSignal.any([signal, AbortSignal.timeout(12000)]);
-          const endpoint = new URL('api/provider-quota-company-rules', document.baseURI);
-          if (refresh && !companyRulesCsrf) await requestCompanyRules(false, combined);
-          const response = await fetch(endpoint, {
-            method: refresh ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal: combined,
-            headers: refresh ? { 'Content-Type': 'application/json', 'X-Quota-Settings-CSRF': companyRulesCsrf } : { Accept: 'application/json' },
-            ...(refresh ? { body: JSON.stringify({ action: 'refresh' }) } : {}),
-          });
-          if (!response.ok) throw new Error('company-rules-unavailable');
-          const data = await response.json();
-          if (typeof data?.csrf === 'string' && /^[A-Za-z0-9_-]{43}$/.test(data.csrf)) companyRulesCsrf = data.csrf;
-          else throw new Error('company-rules-unavailable');
-          return data;
-        };
-        const providerManager = createProviderManager(ctx, {
-          readCompanyRules: signal => requestCompanyRules(false, signal),
-          refreshCompanyRules: signal => requestCompanyRules(true, signal),
-          readRouteHosts: async signal => {
-            const response = await fetch(new URL('api/provider-quota-route-hosts', document.baseURI), {
-              method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
-              signal: AbortSignal.any([signal, AbortSignal.timeout(10000)]), headers: { Accept: 'application/json' },
-            });
-            if (!response.ok) throw new Error('route-hosts-unavailable');
-            return response.json();
-          },
-        });
-        ctx.inject(['remote.llm'], () => { void providerManager.retryAfterRemoteReady(); });
-        ctx.effect(() => () => providerManager.dispose());
-        ctx.effect(() => {
-          const refreshManagedProviders = () => providerManager.refreshIfLoaded();
-          const disposers = [
-            ctx.remote.$on('settings/document-updated', refreshManagedProviders),
-            ctx.remote.$on('credentials/record-updated', refreshManagedProviders),
-            ctx.remote.$on('credentials/reference-updated', refreshManagedProviders),
-            ctx.remote.$on('llm/adapters-updated', refreshManagedProviders),
-            ctx.on('connection/reset', refreshManagedProviders),
-          ];
-          return () => { for (const dispose of disposers) dispose(); };
-        });
         let snapshot = { data: null, loading: false, error: false };
         const listeners = new Set();
         let pending, controller, timer, active = true;
@@ -854,7 +823,23 @@ window.__ModuleLoader__.load({
           catch { return `${metric.currency} ${number(amount)}`; }
         }
         function percent(value) { return number(Math.round(value * 10) / 10); }
+        function isTeamPlanKind(kind) { return kind === 'glm-cn-team' || kind === 'zai-coding-plan-team'; }
+        // 'no-plan' means different things for the personal and team monitors.
+        function statusKey(row) { return row.status === 'no-plan' && isTeamPlanKind(row.kind) ? 'no-team-plan' : row.status; }
+        // A provider's personal row and its Team Plan sibling share one key. The
+        // popup lists both; the dock shows whichever one actually carries quota.
+        function providerRows(rows, provider) {
+          const personal = rows.find(item => item.id === provider);
+          if (!personal) return [];
+          const team = rows.find(item => item.id === `${provider}::team`);
+          return team ? [personal, team] : [personal];
+        }
+        function preferredRow(rows, provider) {
+          const candidates = providerRows(rows, provider);
+          return candidates.find(row => row.metrics.length > 0) ?? candidates[0] ?? null;
+        }
         function providerName(row) {
+          if (isTeamPlanKind(row.kind)) return `${providerName({ ...row, kind: row.kind.slice(0, -'team'.length) })} · ${t('teamPlan')}`;
           if (row.kind === 'glm-standard-cn') return t('glmApi');
           if (row.name === 'zai-coding-cn') return t('cnPlan');
           if (row.kind === 'zai-coding-plan') return t('zaiPlan');
@@ -896,7 +881,7 @@ window.__ModuleLoader__.load({
           switch (row.kind) {
             case 'openai': case 'codex': return 'openai';
             case 'deepseek': case 'account': return 'deepseek';
-            case 'glm-cn': case 'glm-standard-cn': case 'zai-coding-plan': return 'glm';
+            case 'glm-cn': case 'glm-standard-cn': case 'zai-coding-plan': case 'glm-cn-team': case 'zai-coding-plan-team': return 'glm';
             case 'minimax-cn': return 'minimax';
             case 'opencode-go': return 'opencode';
             default: return 'other';
@@ -904,7 +889,7 @@ window.__ModuleLoader__.load({
         }
         function kindLabel(row) {
           if (row.metrics.some(metric => metric.type === 'spend') || row.kind === 'openai') return t('kindSpend');
-          if (['glm-cn', 'zai-coding-plan', 'codex', 'opencode-go', 'minimax-cn'].includes(row.kind)) return t('kindPlan');
+          if (['glm-cn', 'zai-coding-plan', 'glm-cn-team', 'zai-coding-plan-team', 'codex', 'opencode-go', 'minimax-cn'].includes(row.kind)) return t('kindPlan');
           if (row.kind === 'glm-standard-cn') return t('kindBalance');
           return t(row.metrics.some(metric => metric.type === 'balance') || ['deepseek', 'account'].includes(row.kind) ? 'kindBalance' : 'kindOther');
         }
@@ -995,7 +980,7 @@ window.__ModuleLoader__.load({
           return h('article', { className: 'pq-row' },
             !compact ? h('div', { className: 'pq-row-head' }, h('div', { className: 'pq-row-title' }, h('div', { className: 'pq-name' }, providerName(row)), h('span', { className: 'pq-pill' }, kindLabel(row))), h('button', { className: 'pq-button', type: 'button', disabled: loading, onClick: () => load(true, row.id), 'aria-label': `${t('refreshOne')} ${providerName(row)}` }, t('refreshOne'))) : null,
             h('div', { className: 'pq-tags' }, compact ? h('span', { className: 'pq-pill' }, kindLabel(row)) : null, h(Status, { row, colorThresholds }), row.kind === 'openai' ? h('span', { className: 'pq-pill' }, t('organizationShort')) : null),
-            row.status !== 'ok' ? h('p', { className: `pq-status${quotaTone(row, colorThresholds) === 'error' ? ' pq-error' : ''}`, role: 'status' }, t(row.reason || row.status)) : null,
+            row.status !== 'ok' ? h('p', { className: `pq-status${quotaTone(row, colorThresholds) === 'error' ? ' pq-error' : ''}`, role: 'status' }, t(row.reason || statusKey(row))) : null,
             row.stale ? h('p', { className: 'pq-status pq-warn' }, t('staleDetail')) : null,
             row.metrics.length ? h('div', { className: 'pq-metrics' },
               ...row.metrics.filter(metric => metric.type !== 'resource-package').map((metric, index) => h(Metric, { key: `metric-${index}`, metric, colorThresholds })),
@@ -1164,6 +1149,107 @@ window.__ModuleLoader__.load({
               h('div', { className: 'pq-settings-actions' }, h('button', { type: 'submit', className: 'pq-button', disabled: busy || !hasKeyInput }, t(busy ? 'loading' : 'adminSave')))),
             notice ? h('p', { className: `pq-status ${notice === 'adminSaved' ? 'pq-success' : 'pq-error'}`, role: notice === 'adminSaved' ? 'status' : 'alert' }, t(notice)) : null,
             h('p', { className: 'pq-note' }, t('adminUseOfficial')));
+        }
+        // GLM Team Plan: one draft entry per personal Coding Plan kind present on
+        // the page. An enabled entry with both IDs empty asks the server for the
+        // account's default team project; the Host never echoes the IDs back
+        // into quota rows, only into this settings form.
+        const GLM_TEAM_PLAN_KINDS = Object.freeze(['glm-cn', 'zai-coding-plan']);
+        const emptyTeamPlanDraft = () => ({ enabled: false, organizationId: '', projectId: '' });
+        function validTeamPlanId(value) { return value.length <= 128 && !/[^\x21-\x7e]/.test(value); }
+        // Normalized Host payload for the draft, or null when it is invalid.
+        function teamPlanPayload(draft) {
+          const payload = {};
+          for (const kind of GLM_TEAM_PLAN_KINDS) {
+            const entry = draft[kind] ?? emptyTeamPlanDraft();
+            if (!entry.enabled) continue;
+            const organizationId = entry.organizationId.trim(), projectId = entry.projectId.trim();
+            if (Boolean(organizationId) !== Boolean(projectId) || !validTeamPlanId(organizationId) || !validTeamPlanId(projectId)) return null;
+            payload[kind] = { organizationId, projectId };
+          }
+          return payload;
+        }
+        function sameTeamPlans(a, b) {
+          const keys = Object.keys(a).sort();
+          return JSON.stringify(keys) === JSON.stringify(Object.keys(b).sort()) && keys.every(kind => a[kind].organizationId === b[kind].organizationId && a[kind].projectId === b[kind].projectId);
+        }
+        function GlmTeamPlanSettings({ routes }) {
+          React.useSyncExternalStore(callback => ctx.locale.subscribe(callback), () => ctx.locale.getSnapshot());
+          const kindKey = GLM_TEAM_PLAN_KINDS.filter(kind => routes.some(row => row.kind === kind)).join(' ');
+          const kinds = kindKey ? kindKey.split(' ') : [];
+          const [data, setData] = React.useState(null);
+          const [draft, setDraft] = React.useState({});
+          const [busy, setBusy] = React.useState(true);
+          const [notice, setNotice] = React.useState(null);
+          const controllerRef = React.useRef(null), csrfRef = React.useRef(null), saveRef = React.useRef(null);
+          const draftFrom = plans => Object.fromEntries(kinds.map(kind => [kind, { enabled: Boolean(plans?.[kind]), organizationId: plans?.[kind]?.organizationId ?? '', projectId: plans?.[kind]?.projectId ?? '' }]));
+          React.useEffect(() => {
+            let live = true, pending = false;
+            const fail = code => { throw new Error(code); };
+            const errors = ['invalid-team-plan', 'settings-unavailable', 'settings-conflict', 'save-failed', 'forbidden'];
+            const read = async payload => {
+              if (!live || pending) return;
+              if (payload && !csrfRef.current) { setNotice('glmTeamPlanError'); return; }
+              pending = true;
+              const controller = new AbortController(); controllerRef.current = controller;
+              const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]);
+              setBusy(true); setNotice(null);
+              try {
+                const response = await fetch(new URL('api/provider-quota-settings', document.baseURI), {
+                  method: payload ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal,
+                  headers: payload ? { 'Content-Type': 'application/json', 'X-Quota-Settings-CSRF': csrfRef.current } : { Accept: 'application/json' },
+                  ...(payload ? { body: JSON.stringify(payload) } : {}),
+                });
+                const body = await response.json();
+                if (!response.ok) fail(errors.includes(body?.error) ? body.error : payload ? 'save-failed' : 'settings-unavailable');
+                if (!body || !body.glmTeamPlans || typeof body.glmTeamPlans !== 'object' || Array.isArray(body.glmTeamPlans) || typeof body.csrf !== 'string' || !body.csrf) fail('settings-unavailable');
+                if (!live || signal.aborted) return;
+                // Saving can recompose this plugin; trust only the persisted readback.
+                if (payload && (body.saved !== true || body.savedItem !== 'glmTeamPlans' || !sameTeamPlans(body.glmTeamPlans, payload.glmTeamPlans))) fail('settings-conflict');
+                csrfRef.current = body.csrf;
+                setData(body); setDraft(draftFrom(body.glmTeamPlans)); setNotice(payload ? 'glmTeamPlanSaved' : null);
+              } catch (error) {
+                if (live && !controller.signal.aborted) setNotice(errors.includes(error.message) ? error.message : payload ? 'save-failed' : 'glmTeamPlanError');
+              } finally { pending = false; if (live) setBusy(false); }
+            };
+            saveRef.current = payload => read(payload);
+            read();
+            const refresh = () => { if (document.visibilityState === 'visible') read(); };
+            document.addEventListener('visibilitychange', refresh);
+            return () => { live = false; controllerRef.current?.abort(); csrfRef.current = null; saveRef.current = null; document.removeEventListener('visibilitychange', refresh); };
+          }, [kindKey]);
+          const payload = teamPlanPayload(draft);
+          const saved = data ? teamPlanPayload(draftFrom(data.glmTeamPlans)) : null;
+          const editable = Boolean(data?.writable) && !busy;
+          const enabledAny = Boolean(payload && Object.keys(payload).length);
+          return h('section', { className: 'pq-admin-panel', 'aria-label': t('glmTeamPlanTitle') }, h('style', null, css),
+            h('h3', null, t('glmTeamPlanTitle')),
+            h('p', { className: 'pq-muted' }, t('glmTeamPlanIntro')),
+            h('div', { className: 'pq-tags', 'aria-label': t('route') }, routes.map(row => h('span', { key: row.id, className: 'pq-pill pq-admin-route' }, providerName(row), ' · ', row.id))),
+            data || busy ? h('p', { className: `pq-note pq-admin-key-status${enabledAny ? ' pq-admin-key-configured' : ''}`, role: 'status' }, h('span', { className: 'pq-dot', ...(enabledAny ? { 'data-tone': 'success' } : {}), 'aria-hidden': true }), t(!data ? 'glmTeamPlanChecking' : enabledAny ? 'glmTeamPlanOn' : 'glmTeamPlanOff')) : null,
+            data && !data.writable ? h('p', { className: 'pq-status pq-warn' }, t('readOnly')) : null,
+            h('form', { className: 'pq-admin-form', autoComplete: 'off', onSubmit: event => {
+              event.preventDefault();
+              if (!payload || !editable || !dirty()) return;
+              saveRef.current?.({ action: 'saveGlmTeamPlans', glmTeamPlans: payload });
+            } },
+              ...kinds.map(kind => {
+                const entry = draft[kind] ?? emptyTeamPlanDraft();
+                const change = (key, value) => { setDraft(previous => ({ ...previous, [kind]: { ...(previous[kind] ?? emptyTeamPlanDraft()), [key]: value } })); setNotice(null); };
+                return h('fieldset', { key: kind, className: 'pq-team-plan-kind' },
+                  h('legend', null, t(kind === 'glm-cn' ? 'cnPlan' : 'zaiPlan'), ' · ', t('teamPlan')),
+                  h('label', { className: 'pq-team-plan-check' }, h('input', { type: 'checkbox', checked: entry.enabled, disabled: !editable, onChange: event => change('enabled', event.target.checked) }), t('glmTeamPlanEnable')),
+                  h('label', { className: 'pq-settings-label', htmlFor: `pq-team-org-${kind}` }, t('glmTeamPlanOrg')),
+                  h('input', { id: `pq-team-org-${kind}`, className: 'pq-settings-input', type: 'text', value: entry.organizationId, placeholder: t('glmTeamPlanOrgPlaceholder'), disabled: !editable || !entry.enabled, onChange: event => change('organizationId', event.target.value), autoComplete: 'off', autoCapitalize: 'none', spellCheck: false, maxLength: 128 }),
+                  h('label', { className: 'pq-settings-label', htmlFor: `pq-team-project-${kind}` }, t('glmTeamPlanProject')),
+                  h('input', { id: `pq-team-project-${kind}`, className: 'pq-settings-input', type: 'text', value: entry.projectId, placeholder: t('glmTeamPlanProjectPlaceholder'), disabled: !editable || !entry.enabled, onChange: event => change('projectId', event.target.value), autoComplete: 'off', autoCapitalize: 'none', spellCheck: false, maxLength: 128 }),
+                  h('p', { className: 'pq-note' }, t('glmTeamPlanHint')));
+              }),
+              data && !payload ? h('p', { className: 'pq-status pq-error', role: 'alert' }, t('invalid-team-plan')) : null,
+              h('div', { className: 'pq-settings-actions' },
+                h('button', { type: 'submit', className: 'pq-button', disabled: !editable || !payload || !dirty() }, t(busy ? 'loading' : 'glmTeamPlanSave')))),
+            notice ? h('p', { className: `pq-status ${notice === 'glmTeamPlanSaved' ? 'pq-success' : 'pq-error'}`, role: notice === 'glmTeamPlanSaved' ? 'status' : 'alert' }, t(notice)) : null);
+          function dirty() { return !saved || !payload || !sameTeamPlans(saved, payload); }
         }
         function safeCodexOfficialLink(value) {
           if (typeof value !== 'string' || value.length > 16384 || value.trim() !== value || /[\u0000-\u0020\u007f]/.test(value)) return null;
@@ -1391,7 +1477,7 @@ window.__ModuleLoader__.load({
             'gateway/result-invalid', 'gateway/service-unavailable', 'gateway/signature-invalid', 'gateway/uplink-overflow',
           ]);
           const API_REMOTES_PACKAGE = '@deepseek-ai/dsh-api-remotes';
-          const PROVIDER_PACKAGE = 'dsh-quota-cordis';
+          const PROVIDER_PACKAGE = 'dsh-glmteam-quota';
           const remoteReadinessReasons = new Set([
             'client-module-graph-unavailable', 'api-remotes-dependency-missing', 'api-remotes-module-missing',
             'api-remotes-entry-missing', 'api-remotes-import-failed', 'api-remotes-activation-failed',
@@ -2617,6 +2703,7 @@ window.__ModuleLoader__.load({
           if (selected) {
             const adminRoutes = selected.routes.filter(row => row.kind === 'openai');
             const codexRoutes = selected.key === 'openai' ? selected.routes.filter(row => row.kind === 'codex') : [];
+            const teamPlanRoutes = selected.key === 'glm' ? selected.routes.filter(row => row.kind === 'glm-cn' || row.kind === 'zai-coding-plan') : [];
             return h('section', { className: 'pq-provider-settings' },
               h('button', { type: 'button', className: 'pq-button pq-provider-back', ref: viewFocusRef, onClick: () => setSelectedKey(null) }, `‹ ${t('providerSettingsBack')}`),
               h('h3', { className: 'pq-provider-detail-title' }, selected.title || t(selected.label)),
@@ -2628,7 +2715,11 @@ window.__ModuleLoader__.load({
               codexRoutes.length ? h(CodexAuthorizationPanel) : null,
               adminRoutes.length ? h('section', { className: 'pq-provider-extra-settings' },
                 h('h4', { className: 'pq-provider-routes-title' }, t('providerAdditionalSettings')),
-                h(OpenAIExtraSettings, { routes: adminRoutes })) : codexRoutes.length ? null : h('p', { className: 'pq-note' }, t('providerSettingsNoExtra')));
+                h(OpenAIExtraSettings, { routes: adminRoutes }))
+                : teamPlanRoutes.length ? h('section', { className: 'pq-provider-extra-settings' },
+                  h('h4', { className: 'pq-provider-routes-title' }, t('providerAdditionalSettings')),
+                  h(GlmTeamPlanSettings, { routes: teamPlanRoutes }))
+                : codexRoutes.length ? null : h('p', { className: 'pq-note' }, t('providerSettingsNoExtra')));
           }
           return h('section', { className: 'pq-provider-settings' },
             h('h3', { ref: viewFocusRef, tabIndex: -1, className: 'pq-provider-detail-title' }, t('providerSettingsTitle')),
@@ -2641,12 +2732,13 @@ window.__ModuleLoader__.load({
         function Page() {
           const state = useQuota();
           const rows = state.data?.rows ?? [];
-          const [tab, setTab] = React.useState('models');
-          const [modelsVisited, setModelsVisited] = React.useState(true);
+          const [tab, setTab] = React.useState('providers');
           const tabRefs = React.useRef({});
-          const tabs = ['models', 'providers', 'colors'];
-          const selectTab = id => { if (id === 'models') setModelsVisited(true); setTab(id); };
-          React.useEffect(() => { if (!tabs.includes(tab)) selectTab('models'); }, [tab]);
+          // Provider/model editing lives in DSH's official Models page; this
+          // plugin's settings only expose quotas and thresholds.
+          const tabs = ['providers', 'colors'];
+          const selectTab = setTab;
+          React.useEffect(() => { if (!tabs.includes(tab)) selectTab('providers'); }, [tab]);
           const tabKey = event => {
             let target;
             if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') target = tabs[(tabs.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
@@ -2654,7 +2746,7 @@ window.__ModuleLoader__.load({
             else if (event.key === 'End') target = tabs[tabs.length - 1];
             if (target) { event.preventDefault(); selectTab(target); tabRefs.current[target]?.focus(); }
           };
-          const tabLabel = id => t(id === 'colors' ? 'colorsTab' : id === 'models' ? 'providerManagerTab' : 'providerSettingsTab');
+          const tabLabel = id => t(id === 'colors' ? 'colorsTab' : 'providerSettingsTab');
           return h('section', { className: 'pq-page', 'aria-label': t('title') }, h('style', null, css),
             h('header', { className: 'pq-top' }, h('div', null, h('h2', null, t('title')), h('div', { className: 'pq-muted' }, t('subtitle'))), tab === 'providers' ? h('button', { type: 'button', className: 'pq-button', disabled: state.loading, onClick: () => load(true) }, t(state.loading ? 'loading' : 'refresh')) : null),
             h('div', { className: 'pq-tabs', role: 'tablist', 'aria-label': t('title'), onKeyDown: tabKey }, ...tabs.map(id => h('button', {
@@ -2662,16 +2754,70 @@ window.__ModuleLoader__.load({
               ref: node => { tabRefs.current[id] = node; }, 'aria-selected': tab === id, 'aria-controls': `pq-panel-${id}`,
               tabIndex: tab === id ? 0 : -1, onClick: () => selectTab(id),
             }, tabLabel(id)))),
-            h('div', { id: 'pq-panel-models', role: 'tabpanel', 'aria-labelledby': 'pq-tab-models', className: 'pq-tab-panel', hidden: tab !== 'models', tabIndex: 0 }, modelsVisited ? h(ProviderManager, { manager: providerManager }) : null),
             h('div', { id: 'pq-panel-providers', role: 'tabpanel', 'aria-labelledby': 'pq-tab-providers', className: 'pq-tab-panel', hidden: tab !== 'providers', tabIndex: 0 }, tab === 'providers' ? h(React.Fragment, null,
               state.error ? h('p', { role: 'alert', className: 'pq-error' }, t('serviceError')) : null,
               h(ProviderSettings, { rows, loading: state.loading, error: state.error, colorThresholds: state.data?.colorThresholds })) : null),
             h('div', { id: 'pq-panel-colors', role: 'tabpanel', 'aria-labelledby': 'pq-tab-colors', className: 'pq-tab-panel', hidden: tab !== 'colors', tabIndex: 0 }, tab === 'colors' ? h(QuotaSettings) : null));
         }
+        function useClock() {
+          const [now, setNow] = React.useState(() => Date.now());
+          React.useEffect(() => {
+            const update = () => { if (document.visibilityState === 'visible') setNow(Date.now()); };
+            const clock = setInterval(update, 15_000);
+            document.addEventListener('visibilitychange', update);
+            update();
+            return () => { clearInterval(clock); document.removeEventListener('visibilitychange', update); };
+          }, []);
+          return now;
+        }
+        function formatMonthDay(value) {
+          if (!Number.isFinite(value)) return '—';
+          try { return new Intl.DateTimeFormat(ctx.locale.getLocale().active, { month: 'long', day: 'numeric' }).format(new Date(value)); }
+          catch { return formatQuotaDate(value, { includeYear: false, dateOnly: true }); }
+        }
+        // Short clock-style countdown (20:57) for the 5-hour window.
+        function formatClockCountdown(value, now) {
+          if (!Number.isFinite(value) || !Number.isFinite(now)) return '—';
+          const minutes = Math.max(0, Math.ceil((value - now) / 60_000));
+          if (minutes >= 24 * 60) return formatQuotaCountdown(value, now);
+          return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+        }
+        function isRollingWindow(metric) { return metric.label === 'rolling' || metric.durationSeconds === 18_000; }
+        function remainingOf(metric) { return 100 - Math.min(100, Math.max(0, metric.usedPercent)); }
+        // Mirrors DSH's built-in ContextMeter ring (14px, r 5.5, 2px stroke) so the
+        // two composer-dock widgets read as one family; only the stroke carries
+        // the quota tone.
+        function QuotaRing({ metric, colorThresholds }) {
+          const remaining = remainingOf(metric);
+          const tone = quotaBarTone(remaining, colorThresholds);
+          const radius = 5.5, circumference = 2 * Math.PI * radius;
+          return h('svg', { className: 'pq-ring', viewBox: '0 0 14 14', width: 14, height: 14, 'aria-hidden': true },
+            h('circle', { className: 'pq-ring-track', cx: 7, cy: 7, r: radius }),
+            h('circle', { className: 'pq-ring-fill', cx: 7, cy: 7, r: radius, stroke: `var(--dsw-alias-state-${tone}-primary)`, strokeDasharray: `${circumference * remaining / 100} ${circumference}`, transform: 'rotate(-90 7 7)' }));
+        }
+        // One "remaining quota" tile: label, remaining %, reset countdown/date, bar.
+        function QuotaTile({ metric, colorThresholds, now }) {
+          const remaining = remainingOf(metric);
+          const tone = quotaBarTone(remaining, colorThresholds);
+          const label = `${metric.model ? `${metric.model} · ` : ''}${t(metric.label)}`;
+          const suffix = metric.resetsAt ? (isRollingWindow(metric) ? formatClockCountdown(metric.resetsAt, now) : formatMonthDay(metric.resetsAt)) : null;
+          return h('div', { className: 'pq-card-tile' },
+            h('div', { className: 'pq-card-label' }, label),
+            h('div', { className: 'pq-card-value' }, h('strong', null, `${percent(remaining)}%`), suffix ? h('span', { className: 'pq-card-sub' }, ` · ${suffix}`) : null),
+            h('div', { className: 'pq-track pq-card-track', role: 'progressbar', 'aria-label': `${label} · ${t('left')}`, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': remaining }, h('div', { className: 'pq-fill', style: { width: `${remaining}%`, background: `var(--dsw-alias-state-${tone}-primary)` } })),
+            metric.total !== undefined ? h('div', { className: 'pq-card-footnote' }, `${number(metric.remaining ?? Math.max(0, metric.total - (metric.used ?? 0)))} / ${number(metric.total)} ${t(metric.unit)} ${t('left')}`) : null);
+        }
         function PopupSurface({ opened }) {
           const state = useQuota();
-          const row = state.data?.rows.find(item => item.id === opened.provider);
-          const panelRef = React.useRef(null), closeRef = React.useRef(null);
+          const now = useClock();
+          const rows = providerRows(state.data?.rows ?? [], opened.provider);
+          // Default to the plan that carries quota; the user's choice wins afterwards.
+          const [planChoice, setPlanChoice] = React.useState(null);
+          const withData = rows.findIndex(item => item.metrics.length > 0);
+          const selected = Math.min(planChoice ?? (withData >= 0 ? withData : 0), Math.max(0, rows.length - 1));
+          const row = rows[selected];
+          const tiles = row ? row.metrics.filter(metric => metric.type === 'quota-window') : [];
+          const panelRef = React.useRef(null);
           const [position, setPosition] = React.useState(() => placeQuotaPopup(opened.anchor.getBoundingClientRect(), viewport()));
           React.useLayoutEffect(() => {
             let frame;
@@ -2684,7 +2830,7 @@ window.__ModuleLoader__.load({
               frame = window.requestAnimationFrame(update);
             };
             update();
-            closeRef.current?.focus({ preventScroll: true });
+            panelRef.current?.focus({ preventScroll: true });
             const outside = event => {
               if (!panelRef.current?.contains(event.target) && !anchor.contains(event.target)) closePopup(false);
             };
@@ -2706,10 +2852,26 @@ window.__ModuleLoader__.load({
           }, [opened]);
           React.useEffect(() => { if (!row) closePopup(false); }, [row]);
           if (!row || !position) return null;
-          return h('section', { id: POPUP_ID, className: 'pq-popup', ref: panelRef, role: 'dialog', 'aria-modal': false, 'aria-labelledby': `${POPUP_ID}-title`, style: { left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight, transform: position.above ? 'translateY(-100%)' : 'none' } },
+          const titleId = `${POPUP_ID}-title`;
+          return h('section', { id: POPUP_ID, className: 'pq-popup', ref: panelRef, tabIndex: -1, role: 'dialog', 'aria-modal': false, 'aria-labelledby': titleId, style: { left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight, transform: position.above ? 'translateY(-100%)' : 'none' } },
             h('style', null, css),
-            h('header', { className: 'pq-popup-head' }, h('div', null, h('div', { className: 'pq-muted' }, t('details')), h('div', { id: `${POPUP_ID}-title`, className: 'pq-name' }, providerName(row))), h('div', { className: 'pq-popup-actions' }, h('button', { className: 'pq-button', type: 'button', disabled: state.loading, onClick: () => load(true, row.id) }, t(state.loading ? 'loading' : 'refreshOne')), h('button', { ref: closeRef, className: 'pq-button pq-close', type: 'button', 'aria-label': t('close'), onClick: () => closePopup(true) }, '×'))),
-            h('div', { className: 'pq-popup-scroll' }, state.error ? h('p', { className: 'pq-status pq-error', role: 'alert' }, t('serviceError')) : null, h(Row, { row, loading: state.loading, compact: true, colorThresholds: state.data?.colorThresholds })));
+            h('header', { className: 'pq-popup-head' },
+              h('div', { className: 'pq-popup-title' },
+                h('div', { id: titleId, className: 'pq-name' }, tiles.length ? t('remainingQuota') : providerName(row)),
+                rows.length > 1 ? h('div', { className: 'pq-seg', role: 'group', 'aria-label': t('planSwitch') }, ...rows.map((item, index) =>
+                  h('button', { key: item.id, type: 'button', className: `pq-seg-item${index === selected ? ' is-active' : ''}`, 'aria-pressed': index === selected, onClick: () => setPlanChoice(index) }, t(isTeamPlanKind(item.kind) ? 'teamPlan' : 'personalPlan')))) : null),
+              h('div', { className: 'pq-popup-actions' },
+                h('button', { className: 'pq-button pq-icon-button', type: 'button', disabled: state.loading, onClick: () => load(true, rows.length > 1 ? undefined : row.id), 'aria-label': t('refreshOne'), title: t('refreshOne') }, state.loading ? '…' : '↻'),
+                row.dashboardUrl ? h('a', { className: 'pq-link pq-more', href: row.dashboardUrl, target: '_blank', rel: 'noopener noreferrer' }, t('more'), ' ›') : null)),
+            h('div', { className: 'pq-popup-scroll' },
+              state.error ? h('p', { className: 'pq-status pq-error', role: 'alert' }, t('serviceError')) : null,
+              row.status !== 'ok' && !tiles.length ? h('p', { className: `pq-status${quotaTone(row, state.data?.colorThresholds) === 'error' ? ' pq-error' : ''}`, role: 'status' }, t(row.reason || statusKey(row))) : null,
+              row.stale ? h('p', { className: 'pq-status pq-warn' }, t('staleDetail')) : null,
+              tiles.length ? h('div', { className: 'pq-popup-card' },
+                row.status !== 'ok' && !row.metrics.length ? h('p', { className: 'pq-status', role: 'status' }, t(statusKey(row))) : null,
+                h('div', { className: 'pq-card-grid' }, ...tiles.map((metric, index) => h(QuotaTile, { key: `tile-${index}`, metric, colorThresholds: state.data?.colorThresholds, now }))),
+                h('div', { className: 'pq-popup-foot' }, h('span', { className: 'pq-muted' }, `${providerName(row)} · ${t('updated')} ${row.fetchedAt ? time(row.fetchedAt) : t('never')}`)))
+                : h('div', { className: 'pq-popup-card' }, h(Row, { row, loading: state.loading, compact: true, colorThresholds: state.data?.colorThresholds }))));
         }
         function Popup() {
           const opened = React.useSyncExternalStore(popupSubscribe, () => popup);
@@ -2722,7 +2884,7 @@ window.__ModuleLoader__.load({
           const anchorRef = React.useRef(null);
           const projectedProvider = props.useProjection('modelSelection', value => value?.next?.provider);
           const provider = projectedProvider ?? state.data?.defaultProvider;
-          const row = state.data?.rows.find(item => item.id === provider);
+          const row = preferredRow(state.data?.rows ?? [], provider);
           React.useEffect(() => () => {
             if (popup?.sessionId === props.sessionId && popup?.provider === provider) closePopup(false);
           }, [props.sessionId, provider]);
@@ -2734,11 +2896,18 @@ window.__ModuleLoader__.load({
           });
           const text = segments.map(segment => segment.text).join(' · ');
           const isOpen = opened?.anchor === anchorRef.current;
+          const openPopup = () => {
+            if (popup?.anchor === anchorRef.current) closePopup(true);
+            else publishPopup({ provider, sessionId: props.sessionId, anchor: anchorRef.current, generation: ++popupGeneration });
+          };
+          // A plan row with a 5-hour window collapses into one energy ring; other
+          // providers (balances, spend, weekly-only plans) keep the text summary.
+          const ringMetric = row.metrics.find(metric => metric.type === 'quota-window' && isRollingWindow(metric));
+          const summary = `${providerName(row)} · ${text || statusLabel(row, colorThresholds)}${row.stale ? ` · ${t('stale')}` : ''}`;
           return h('div', { className: 'pq-dock' }, h('style', null, css),
-            h('button', { ref: anchorRef, type: 'button', className: 'pq-trigger', 'aria-haspopup': 'dialog', 'aria-expanded': isOpen, 'aria-controls': isOpen ? POPUP_ID : undefined, 'aria-label': `${t('current')} · ${providerName(row)} · ${text || statusLabel(row, colorThresholds)} · ${statusLabel(row, colorThresholds)}`, title: t('details'), onClick: () => {
-              if (popup?.anchor === anchorRef.current) closePopup(true);
-              else publishPopup({ provider, sessionId: props.sessionId, anchor: anchorRef.current, generation: ++popupGeneration });
-            } }, h('span', { className: 'pq-dot', 'data-tone': state.error ? 'error' : quotaTone(row, colorThresholds), 'aria-hidden': true }), h('span', { className: 'pq-trigger-name' }, providerName(row)), h('span', { className: 'pq-trigger-value' }, segments.length ? segments.map((segment, index) => h(React.Fragment, { key: index }, index ? h('span', { className: 'pq-summary-separator', 'aria-hidden': true }, ' · ') : null, h('span', { className: 'pq-summary-item', 'data-tone': segment.tone }, segment.text))) : statusLabel(row, colorThresholds), row.stale ? ` · ${t('stale')}` : state.error || row.status !== 'ok' && text ? ` · ${t('queryError')}` : ''), h('svg', { className: 'pq-chevron', viewBox: '0 0 16 16', 'aria-hidden': true }, h('path', { d: 'm4 10 4-4 4 4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }))));
+            ringMetric ? h('button', { ref: anchorRef, type: 'button', className: 'pq-trigger-ring', 'aria-haspopup': 'dialog', 'aria-expanded': isOpen, 'aria-controls': isOpen ? POPUP_ID : undefined, 'aria-label': `${t('current')} · ${summary}`, onClick: openPopup },
+              h(QuotaRing, { metric: ringMetric, colorThresholds }), h('span', null, `${percent(remainingOf(ringMetric))}%`)) :
+            h('button', { ref: anchorRef, type: 'button', className: 'pq-trigger', 'aria-haspopup': 'dialog', 'aria-expanded': isOpen, 'aria-controls': isOpen ? POPUP_ID : undefined, 'aria-label': `${t('current')} · ${providerName(row)} · ${text || statusLabel(row, colorThresholds)} · ${statusLabel(row, colorThresholds)}`, title: t('details'), onClick: openPopup }, h('span', { className: 'pq-dot', 'data-tone': state.error ? 'error' : quotaTone(row, colorThresholds), 'aria-hidden': true }), h('span', { className: 'pq-trigger-name' }, providerName(row)), h('span', { className: 'pq-trigger-value' }, segments.length ? segments.map((segment, index) => h(React.Fragment, { key: index }, index ? h('span', { className: 'pq-summary-separator', 'aria-hidden': true }, ' · ') : null, h('span', { className: 'pq-summary-item', 'data-tone': segment.tone }, segment.text))) : statusLabel(row, colorThresholds), row.stale ? ` · ${t('stale')}` : state.error || row.status !== 'ok' && text ? ` · ${t('queryError')}` : ''), h('svg', { className: 'pq-chevron', viewBox: '0 0 16 16', 'aria-hidden': true }, h('path', { d: 'm4 10 4-4 4 4', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }))));
         }
         ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'provider-quota', order: 12, label: () => t('title') }, Page));
          // Injection activates only while this optional slot is declared.

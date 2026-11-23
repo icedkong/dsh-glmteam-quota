@@ -1,25 +1,26 @@
 <div align="center">
 
-<img src="docs/icon.png" alt="DSH Quota+ plugin icon" width="160">
+<img src="docs/icon.png" alt="GLM Quota+ plugin icon" width="160">
 
-# DSH Quota+
+# GLM Quota+
 
-**For DeepSeek Harness Desktop: a multi-provider quota and usage dashboard with balances, subscription quotas and OpenAI organization spend, plus multi-provider model management that extends DSH’s official authorization, model selection and reasoning-effort settings. No npm runtime dependencies or install scripts.**
+**For DeepSeek Harness Desktop: a multi-provider quota and usage dashboard with balances, subscription quotas (including the **GLM Team Plan**) and OpenAI organization spend. A single 5-hour energy ring in the composer opens a remaining-quota card where you switch between the personal and team plan. No npm runtime dependencies or install scripts.**
 
-[![Stars](https://img.shields.io/github/stars/WXYS1209/dsh-quota-cordis?style=flat&label=stars&color=f59e0b)](https://github.com/WXYS1209/dsh-quota-cordis/stargazers)
-[![npm](https://img.shields.io/npm/v/dsh-quota-cordis?label=npm&color=0891b2&logo=npm)](https://www.npmjs.com/package/dsh-quota-cordis)
-[![Open Plugin Market](https://img.shields.io/endpoint?url=https%3A%2F%2Fdshopen.org%2Fbadge%2Fdsh-quota-cordis.json%3Flang%3Den)](https://dshopen.org/plugins/dsh-quota-cordis/)
+[![Stars](https://img.shields.io/github/stars/icedkong/dsh-glmteam-quota?style=flat&label=stars&color=f59e0b)](https://github.com/icedkong/dsh-glmteam-quota/stargazers)
+[![License](https://img.shields.io/badge/license-MIT-0891b2)](LICENSE)
 
-[中文说明](<README.zh.md>) &nbsp;|&nbsp; [npm](https://www.npmjs.com/package/dsh-quota-cordis) &nbsp;|&nbsp; [MIT](<LICENSE>)
+[中文说明](<README.zh.md>) &nbsp;|&nbsp; [GitHub](https://github.com/icedkong/dsh-glmteam-quota) &nbsp;|&nbsp; [MIT](<LICENSE>)
+
+> Forked from [WXYS1209/dsh-quota-cordis](https://github.com/WXYS1209/dsh-quota-cordis) (DSH Quota+, MIT). This fork adds GLM Team Plan quota and trims the UI; the upstream copyright and license notices are retained.
 
 </div>
 
 ## Install
 
-This documentation covers **0.7.5**. The declared DSH range remains `>=0.2.2-rc.1 <0.2.3-0`; the recommended and source-audited baseline is **0.2.2-rc.5**, not a re-test of every earlier RC.
+This documentation covers **0.7.6**. The declared DSH range remains `>=0.2.2-rc.1 <0.2.3-0`; the recommended and source-audited baseline is **0.2.2-rc.5**, not a re-test of every earlier RC.
 
 ```sh
-dsh plugin --profile desktop add dsh-quota-cordis
+dsh plugin --profile desktop add https://github.com/icedkong/dsh-glmteam-quota.git
 # or a local checkout
 dsh plugin --profile desktop add /path/to/checkout
 ```
@@ -28,9 +29,8 @@ After updating plugin code, restart DSH and fully refresh the page. The form's *
 
 ## Features
 
-The settings page is titled **DSH Quota+**, with **Models**, **Quotas** and **Settings** tabs:
+The settings page is titled **GLM Quota+**, with **Quotas** and **Settings** tabs; providers and models are managed on DSH’s official Models page:
 
-- **Models:** multi-provider grouping/search; edit providers and models on top of DSH’s official model settings, discover models, manage custom API routes, and set authorization, model selection and reasoning effort; unsupported editors remain read-only.
 - **Quotas:** dashboard for multi-provider balances, subscription quotas and OpenAI organization spend.
 - **Settings:** configurable remaining-quota thresholds.
 - **Composer summary:** compact current-provider status with an upward popup.
@@ -44,6 +44,7 @@ The settings page is titled **DSH Quota+**, with **Models**, **Quotas** and **Se
 | DeepSeek account | Separate recharge and bonus wallets | Accepted |
 | GLM Coding Plan — China | Subscription windows | Accepted |
 | GLM Coding Plan — Global | Subscription windows | Preview |
+| GLM Team Plan — China / Global | Opt-in sibling row: `?type=2` team monitor with optional organization/project scope | Preview (source-verified against ZCode) |
 | GLM Standard API — China | CNY balance and resource packages | Preview |
 | Z.AI Standard API — Global | Detection/status only | No balance query |
 | OpenAI API | Organization spend: UTC today, yesterday, 7d/30d; API-key breakdown | Accepted |
@@ -57,6 +58,7 @@ Missing data is not shown as zero; Credits are usage units, not an API cash bala
 ## Usage notes
 
 - **OpenAI spend needs a separate organization Admin key**, not an inference key. Enter it in OpenAI details; cost data may arrive late or be revised.
+- **GLM Team Plan quota is opt-in.** Open Quotas → GLM / Z.AI → Additional settings → GLM Team Plan, tick the Coding Plan route and save. The plugin queries the official monitor with `?type=2` using the route's own key, the same request ZCode makes. Enter both the organization and project IDs: the monitor never picks a default project and answers an empty success without a scope, which the row reports as "scope required". The official team usage page sends the same IDs as `bigmodel-organization` / `bigmodel-project` request headers. The IDs are stored in plugin config, travel only as `bigmodel-organization` / `bigmodel-project` request headers and never appear in quota rows. A key that belongs to no team plan is reported as such rather than as an outage.
 - Providers follow the actual Host-resolved endpoint first. If no route endpoint exists, a version-matched built-in catalog with a single model hostname can supply a separately labelled grouping hint; it does not change the request endpoint. Saved user settings or configured authentication sort first, then localized names; unknown endpoints stay last. Merely enabling a default entry does not count. Edit expands inside its card; discovery uses a dialog and explicit selection. Final **Save** persists changes; editing does not switch the selected/default model.
 - **Reasoning efforts** can be inherited, disabled, or configured per editable model where the Host schema supports them. Blank platform values use the selected level's name, except a supported blank `off` uses the protocol default. Choose the effort for a conversation in DSH's native model selector.
 - **Fetch available models** tries the platform first on supported listing routes (OpenAI-compatible, Anthropic and Gemini). The dialog labels live results and their credential scope. If live listing fails or is unsupported, it uses the existing DSH catalog when that fallback is safe, without retrying a failed custom endpoint. A successful empty list is not replaced. Fixed platform endpoints follow the DSH Host's outbound proxy settings; custom endpoints need direct public HTTPS access. OpenAI live listing uses an API key, not ChatGPT subscription authorization. Codex uses the DSH built-in catalog.

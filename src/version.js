@@ -11,7 +11,7 @@ const validVersion = value => {
 };
 const readManifest = filename => JSON.parse(readFileSync(filename, 'utf8'));
 const ownPackage = readManifest(fileURLToPath(new URL('../package.json', import.meta.url)));
-if (ownPackage.name !== 'dsh-quota-cordis' || !validVersion(ownPackage.version)) throw new Error('invalid-plugin-metadata');
+if (ownPackage.name !== 'dsh-glmteam-quota' || !validVersion(ownPackage.version)) throw new Error('invalid-plugin-metadata');
 export const PLUGIN_VERSION = ownPackage.version;
 
 // The launcher provides this anchor to the Host before mounting plugins. The

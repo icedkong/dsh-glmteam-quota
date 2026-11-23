@@ -1,4 +1,5 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { GLM_TEAM_PLAN_KINDS } from './adapters.js';
 
 export const DEFAULT_COLOR_THRESHOLDS = Object.freeze({ greenMin: 50, orangeMin: 25 });
 const fail = code => { throw Object.assign(new Error(code), { code }); };
@@ -69,6 +70,52 @@ export class CompanyDomainAliasSettings {
   read() { return { domainAliases: this.value.map(alias => ({ ...alias, domains: [...alias.domains] })), writable: typeof this.persist === 'function' }; }
   async save(value) {
     const validated = validateCompanyDomainAliases(value);
+    if (typeof this.persist !== 'function') fail('settings-unavailable');
+    try { await this.persist(validated); }
+    catch (cause) {
+      fail(typeof cause?.code === 'string' && /conflict/i.test(cause.code) ? 'settings-conflict' : 'save-failed');
+    }
+    this.value = validated;
+    return { ...this.read(), saved: true };
+  }
+}
+
+// Organization and project IDs are opaque server identifiers that travel in
+// request headers, so only printable ASCII is accepted; they are never URLs,
+// keys or paths. Both or neither: a half-configured scope could silently read
+// an unintended team project. An entry with both empty means "enabled, let the
+// server pick the account's default project".
+const TEAM_PLAN_ID_MAX_LENGTH = 128;
+function teamPlanId(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') fail('invalid-team-plan');
+  const trimmed = value.trim();
+  if (trimmed.length > TEAM_PLAN_ID_MAX_LENGTH || /[^\x21-\x7e]/.test(trimmed)) fail('invalid-team-plan');
+  return trimmed;
+}
+
+export function validateGlmTeamPlans(value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid-team-plan');
+  const result = {};
+  for (const [kind, plan] of Object.entries(value)) {
+    if (!Object.prototype.hasOwnProperty.call(GLM_TEAM_PLAN_KINDS, kind)) fail('invalid-team-plan');
+    if (!plan || typeof plan !== 'object' || Array.isArray(plan) || Object.keys(plan).some(key => !['organizationId', 'projectId'].includes(key))) fail('invalid-team-plan');
+    const organizationId = teamPlanId(plan.organizationId);
+    const projectId = teamPlanId(plan.projectId);
+    if (Boolean(organizationId) !== Boolean(projectId)) fail('invalid-team-plan');
+    result[kind] = { organizationId, projectId };
+  }
+  return result;
+}
+
+export class GlmTeamPlanSettings {
+  constructor(value = {}, persist) {
+    this.value = validateGlmTeamPlans(value);
+    this.persist = persist;
+  }
+  read() { return { glmTeamPlans: Object.fromEntries(Object.entries(this.value).map(([kind, plan]) => [kind, { ...plan }])) }; }
+  async save(value) {
+    const validated = validateGlmTeamPlans(value);
     if (typeof this.persist !== 'function') fail('settings-unavailable');
     try { await this.persist(validated); }
     catch (cause) {

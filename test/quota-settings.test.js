@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_COLOR_THRESHOLDS, validateColorThresholds, validateCompanyDomainAliases, QuotaColorSettings, CompanyDomainAliasSettings } from '../src/quota-settings.js';
+import { DEFAULT_COLOR_THRESHOLDS, validateColorThresholds, validateCompanyDomainAliases, validateGlmTeamPlans, QuotaColorSettings, CompanyDomainAliasSettings, GlmTeamPlanSettings } from '../src/quota-settings.js';
 import { apply } from '../index.js';
 
 function fixture() {
@@ -236,3 +236,70 @@ test('Admin form requires CSRF and stores secrets only through the credentials s
   assert.equal(h.state.adminKey, undefined);
   assert.equal(h.state.saves, 0);
 }));
+
+test('GLM Team Plan settings validate scope IDs, never leak into other config keys and persist through the settings route', async () => {
+  assert.deepEqual(validateGlmTeamPlans(undefined), {});
+  assert.deepEqual(validateGlmTeamPlans({}), {});
+  assert.deepEqual(validateGlmTeamPlans({ 'glm-cn': { organizationId: ' org-1 ', projectId: 'proj-1' } }), { 'glm-cn': { organizationId: 'org-1', projectId: 'proj-1' } });
+  assert.deepEqual(validateGlmTeamPlans({ 'zai-coding-plan': {} }), { 'zai-coding-plan': { organizationId: '', projectId: '' } });
+  assert.deepEqual(validateGlmTeamPlans({ 'zai-coding-plan': { organizationId: null, projectId: undefined } }), { 'zai-coding-plan': { organizationId: '', projectId: '' } });
+  for (const bad of [[], null, 'x', 1, { deepseek: { organizationId: '', projectId: '' } }, { 'glm-cn-team': { organizationId: '', projectId: '' } },
+    { 'glm-cn': { organizationId: 'a', projectId: '' } }, { 'glm-cn': { organizationId: '', projectId: 'b' } },
+    { 'glm-cn': { organizationId: 'a b', projectId: 'c' } }, { 'glm-cn': { organizationId: '中文', projectId: 'c' } }, { 'glm-cn': { organizationId: 'a\nb', projectId: 'c' } }, { 'glm-cn': { organizationId: 'a\tb', projectId: 'c' } },
+    { 'glm-cn': { organizationId: 'a', projectId: 'c', extra: 1 } }, { 'glm-cn': { organizationId: 'x'.repeat(129), projectId: 'c' } },
+    { 'glm-cn': { organizationId: 1, projectId: 'c' } }, { 'glm-cn': null }, { 'glm-cn': [] }, { 'glm-cn': 'a' }]) {
+    assert.throws(() => validateGlmTeamPlans(bad), { code: 'invalid-team-plan' }, JSON.stringify(bad));
+  }
+  const f = fixture();
+  try {
+    const browser = await f.browser();
+    assert.deepEqual(browser.glmTeamPlans, {});
+    assert.equal(browser.writable, true);
+    const csrf = browser.csrf;
+    const saved = await f.post({ action: 'saveGlmTeamPlans', glmTeamPlans: { 'glm-cn': { organizationId: ' org-9 ', projectId: 'proj-9' } } }, csrf);
+    assert.equal(saved.status, 200);
+    const body = await saved.json();
+    assert.equal(body.saved, true);
+    assert.equal(body.savedItem, 'glmTeamPlans');
+    assert.deepEqual(body.glmTeamPlans, { 'glm-cn': { organizationId: 'org-9', projectId: 'proj-9' } });
+    assert.deepEqual(f.state.config.glmTeamPlans, { 'glm-cn': { organizationId: 'org-9', projectId: 'proj-9' } });
+    assert.equal(f.state.config.unrelated.keep, true);
+    assert.deepEqual((await f.browser()).glmTeamPlans, { 'glm-cn': { organizationId: 'org-9', projectId: 'proj-9' } });
+    // Turning it off is an empty payload; validation, CSRF and extra keys never write.
+    const off = await f.post({ action: 'saveGlmTeamPlans', glmTeamPlans: {} }, csrf);
+    assert.equal(off.status, 200);
+    assert.deepEqual(f.state.config.glmTeamPlans, {});
+    const writes = f.state.saves;
+    const invalid = await f.post({ action: 'saveGlmTeamPlans', glmTeamPlans: { 'glm-cn': { organizationId: 'a', projectId: '' } } }, csrf);
+    assert.equal(invalid.status, 400);
+    assert.equal((await invalid.json()).error, 'invalid-team-plan');
+    const missing = await f.post({ action: 'saveGlmTeamPlans' }, csrf);
+    assert.equal(missing.status, 400);
+    const extra = await f.post({ action: 'saveGlmTeamPlans', glmTeamPlans: {}, colorThresholds: { greenMin: 90, orangeMin: 10 } }, csrf);
+    assert.equal(extra.status, 400);
+    assert.equal((await extra.json()).error, 'invalid-team-plan');
+    const noCsrf = await f.post({ action: 'saveGlmTeamPlans', glmTeamPlans: { 'glm-cn': { organizationId: 'a', projectId: 'b' } } });
+    assert.equal(noCsrf.status, 403);
+    assert.equal(f.state.saves, writes);
+    assert.deepEqual(f.state.config.glmTeamPlans, {});
+    assert.deepEqual(f.state.config.colorThresholds, undefined);
+  } finally { await f.close(); }
+});
+
+test('GlmTeamPlanSettings reads copies, writes validated values and refuses without a writer', async () => {
+  const writes = [];
+  const settings = new GlmTeamPlanSettings({ 'glm-cn': { organizationId: 'a', projectId: 'b' } }, async value => { writes.push(value); });
+  const read = settings.read();
+  assert.deepEqual(read, { glmTeamPlans: { 'glm-cn': { organizationId: 'a', projectId: 'b' } } });
+  read.glmTeamPlans['glm-cn'].organizationId = 'changed';
+  assert.equal(settings.read().glmTeamPlans['glm-cn'].organizationId, 'a');
+  assert.equal((await settings.save({})).saved, true);
+  assert.deepEqual(writes, [{}]);
+  assert.deepEqual(settings.read(), { glmTeamPlans: {} });
+  await assert.rejects(settings.save({ 'glm-cn': { organizationId: 'a', projectId: '' } }), { code: 'invalid-team-plan' });
+  assert.deepEqual(writes, [{}]);
+  await assert.rejects(new GlmTeamPlanSettings().save({}), { code: 'settings-unavailable' });
+  await assert.rejects(new GlmTeamPlanSettings({}, async () => { throw Object.assign(new Error('x'), { code: 'edit-conflict' }); }).save({}), { code: 'settings-conflict' });
+  await assert.rejects(new GlmTeamPlanSettings({}, async () => { throw new Error('x'); }).save({}), { code: 'save-failed' });
+  assert.throws(() => new GlmTeamPlanSettings({ 'glm-cn': { organizationId: 'a' } }), { code: 'invalid-team-plan' });
+});

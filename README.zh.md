@@ -1,25 +1,26 @@
 <div align="center">
 
-<img src="docs/icon.png" alt="DSH Quota+ 插件图标" width="160">
+<img src="docs/icon.png" alt="GLM Quota+ 插件图标" width="160">
 
-# DSH Quota+
+# GLM Quota+
 
-**面向 DeepSeek Harness Desktop：额度与用量展示面板（多提供商余额、订阅额度与 OpenAI 组织支出），以及增强 DSH 官方模型管理的多供应商模型管理——授权、可选模型与推理强度。无 npm 运行时依赖或安装脚本。**
+**面向 DeepSeek Harness Desktop 的额度与用量面板：多提供商余额、订阅额度（含 **GLM 团队版套餐**）与 OpenAI 组织支出。输入框内一枚 5 小时能量环，点开即可切换个人版 / 团队版。无 npm 运行时依赖或安装脚本。**
 
-[![Stars](https://img.shields.io/github/stars/WXYS1209/dsh-quota-cordis?style=flat&label=stars&color=f59e0b)](https://github.com/WXYS1209/dsh-quota-cordis/stargazers)
-[![npm](https://img.shields.io/npm/v/dsh-quota-cordis?label=npm&color=0891b2&logo=npm)](https://www.npmjs.com/package/dsh-quota-cordis)
-[![开放插件市场](https://img.shields.io/endpoint?url=https%3A%2F%2Fdshopen.org%2Fbadge%2Fdsh-quota-cordis.json)](https://dshopen.org/zh/plugins/dsh-quota-cordis/)
+[![Stars](https://img.shields.io/github/stars/icedkong/dsh-glmteam-quota?style=flat&label=stars&color=f59e0b)](https://github.com/icedkong/dsh-glmteam-quota/stargazers)
+[![License](https://img.shields.io/badge/license-MIT-0891b2)](LICENSE)
 
-[English](<README.md>) &nbsp;|&nbsp; [npm](https://www.npmjs.com/package/dsh-quota-cordis) &nbsp;|&nbsp; [MIT](<LICENSE>)
+[English](<README.md>) &nbsp;|&nbsp; [GitHub](https://github.com/icedkong/dsh-glmteam-quota) &nbsp;|&nbsp; [MIT](<LICENSE>)
+
+> 本项目 fork 自 [WXYS1209/dsh-quota-cordis](https://github.com/WXYS1209/dsh-quota-cordis)（DSH Quota+，MIT），在其基础上加入 GLM 团队版套餐额度并精简界面；上游版权与许可声明予以保留。
 
 </div>
 
 ## 安装
 
-本说明对应 **0.7.5**。DSH 兼容声明仍为 `>=0.2.2-rc.1 <0.2.3-0`；推荐及源码核对基线为 **0.2.2-rc.5**，未逐一重测全部早期 RC。
+本说明对应 **0.7.6**。DSH 兼容声明仍为 `>=0.2.2-rc.1 <0.2.3-0`；推荐及源码核对基线为 **0.2.2-rc.5**，未逐一重测全部早期 RC。
 
 ```sh
-dsh plugin --profile desktop add dsh-quota-cordis
+dsh plugin --profile desktop add https://github.com/icedkong/dsh-glmteam-quota.git
 # 或从本地仓库安装
 dsh plugin --profile desktop add /path/to/checkout
 ```
@@ -28,9 +29,8 @@ dsh plugin --profile desktop add /path/to/checkout
 
 ## 功能
 
-设置页标题为 **DSH Quota+**，包含**模型**、**额度**、**设置**三个标签：
+设置页标题为 **GLM Quota+**，包含**额度**、**设置**两个标签；提供商与模型请在 DSH 官方「模型」页管理：
 
-- **模型**：多供应商分组/搜索；在 DSH 官方模型设置之上编辑提供商与模型、发现模型、管理自定义 API 路由，并支持授权、可选模型与推理强度；不支持编辑的入口只读展示。
 - **额度**：多提供商余额、订阅额度与 OpenAI 组织支出的展示面板。
 - **设置**：自定义剩余额度阈值。
 - **输入框摘要**：当前提供商的紧凑状态与向上展开的浮层。
@@ -44,6 +44,7 @@ dsh plugin --profile desktop add /path/to/checkout
 | DeepSeek 账户 | 充值与赠送钱包分列 | 历史验收 |
 | GLM Coding Plan 国内版 | 订阅窗口 | 历史验收 |
 | GLM Coding Plan 国际版 | 订阅窗口 | 预览 |
+| GLM 团队版套餐（国内 / 国际） | 可选的并列行：`?type=2` 团队接口，可选组织 / 项目范围 | 预览（按 ZCode 源码核对） |
 | GLM Standard API 国内版 | CNY 余额与资源包 | 预览 |
 | Z.AI Standard API 国际版 | 识别与状态 | 不查询余额 |
 | OpenAI API | UTC 今日、昨天、7d/30d 组织支出及 API Key 细分 | 历史验收 |
@@ -57,6 +58,7 @@ dsh plugin --profile desktop add /path/to/checkout
 ## 使用说明
 
 - **OpenAI 支出需单独的组织级 Admin Key**，不能使用推理 Key；在 OpenAI 详情中设置。支出可能延迟或被修订。
+- **GLM 团队版套餐额度需手动启用。** 打开「额度 → GLM / Z.AI → 其他设置 → GLM 团队版套餐」，勾选对应的 Coding Plan 路由并保存。插件使用该路由自身的 Key 请求官方 `?type=2` 团队接口，与 ZCode 的请求方式一致。请同时填写组织 ID 与项目 ID：接口不会自动选择默认项目，未指定范围时返回空数据，额度行会提示需要配置范围。官网团队用量页发送的就是这两个 ID（`bigmodel-organization` / `bigmodel-project` 请求头）。ID 保存在插件配置中，仅作为 `bigmodel-organization` / `bigmodel-project` 请求头发送，不会出现在额度行里。Key 不属于任何团队套餐时会明确提示，而不是当作接口故障。
 - 提供商归属优先按 Host 确认的实际端点；没有路由地址时，版本匹配且模型端点一致的内置目录可提供单独标明来源的展示域名，不改变请求地址。已有用户设置或认证记录的提供商优先，组内按当前语言名称排序，未知端点始终最后。仅默认启用不算已保存。编辑在原卡片内展开，模型发现使用弹窗并明确选择；最终点击**保存**才持久化，不切换当前/默认模型。
 - **推理档位**在 Host 支持的模型编辑项中可继承、禁用或自定义。已选档位的平台参数可留空，默认使用同名值；支持留空的 `off` 保留协议默认行为。会话实际用哪一档仍由 DSH 原生模型选择器决定。
 - **获取可用模型**对受支持的列表接口（OpenAI 兼容、Anthropic、Gemini）优先查询平台，并标明来源和凭据范围。实时发现失败或不支持时，仅在可安全回退的路由上使用 DSH 内置目录，不重复请求失败的自定义端点；平台成功返回空列表不回退。固定平台端点遵循 DSH Host 的出站代理配置；自定义端点需通过公网 HTTPS 直连。OpenAI 实时列表使用 API Key，不使用 ChatGPT 订阅授权；Codex 使用 DSH 内置目录。

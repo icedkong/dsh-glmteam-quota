@@ -4,9 +4,9 @@ import { QuotaManager, readJson } from '../src/manager.js';
 import { apply, inject } from '../index.js';
 
 const balance = amount => ({ balance_infos: [{ currency: 'CNY', total_balance: amount, granted_balance: '0.00', topped_up_balance: amount }] });
-function fixture({ providers = { deepseek: { apiKeyEnv: 'CUSTOM_KEY' } }, keys = { CUSTOM_KEY: 'secret-fixture-A' }, records = {}, whole = false } = {}) {
+function fixture({ providers = { deepseek: { apiKeyEnv: 'CUSTOM_KEY' } }, keys = { CUSTOM_KEY: 'secret-fixture-A' }, records = {}, whole = false, teamPlans = {} } = {}) {
   let now = 1000000;
-  const state = { providers, keys, records, requests: [], response: balance('20.00'), code: 200 };
+  const state = { providers, keys, records, teamPlans, requests: [], response: balance('20.00'), code: 200 };
   const services = {
     llm: {
       listProviders: () => Object.keys(state.providers).map(id => ({ id, name: id })),
@@ -29,7 +29,7 @@ function fixture({ providers = { deepseek: { apiKeyEnv: 'CUSTOM_KEY' } }, keys =
     state.requests.push({ url, options });
     return Response.json(state.response, { status: state.code });
   };
-  const manager = new QuotaManager(services, { fetcher, now: () => now, adminKeyResolver: async () => undefined });
+  const manager = new QuotaManager(services, { fetcher, now: () => now, adminKeyResolver: async () => undefined, teamPlansProvider: () => state.teamPlans });
   return { state, services, manager, advance: milliseconds => { now += milliseconds; } };
 }
 
@@ -289,6 +289,114 @@ test('DSH built-in Z.AI Coding Plan queries the official global quota monitor wi
       assert.equal(JSON.stringify(result).includes('zai-plan-secret'), false);
     } finally { await f.manager.dispose(); }
   }
+});
+
+test('GLM Team Plan rows appear only when enabled and query the type=2 team monitor with scope headers', async () => {
+  const f = fixture({ providers: {
+    'zai-coding-cn': { baseURL: 'https://open.bigmodel.cn/api/coding/paas/v4', apiKeyEnv: 'CN_KEY' },
+  }, keys: { CN_KEY: 'team-secret' } });
+  f.state.response = { code: 200, data: { limits: [
+    { type: 'TOKENS_LIMIT', unit: 3, number: 5, percentage: 10 },
+    { type: 'TOKENS_LIMIT', unit: 6, number: 1, percentage: 20 },
+  ] } };
+  try {
+    let result = await f.manager.snapshot();
+    assert.deepEqual(result.rows.map(row => row.id), ['zai-coding-cn']);
+    f.state.teamPlans = { 'glm-cn': { organizationId: 'org-123', projectId: 'proj-456' } };
+    result = await f.manager.snapshot();
+    assert.deepEqual(result.rows.map(row => [row.id, row.kind]), [['zai-coding-cn', 'glm-cn'], ['zai-coding-cn::team', 'glm-cn-team']]);
+    const team = result.rows[1];
+    assert.equal(team.status, 'ok');
+    assert.equal(team.source, 'glm-team-plan-usage');
+    assert.equal(team.name, 'zai-coding-cn');
+    assert.equal(team.dashboardUrl, 'https://bigmodel.cn/coding-plan/personal/usage');
+    assert.deepEqual(team.metrics.map(metric => [metric.label, metric.usedPercent]), [['rolling', 10], ['weekly', 20]]);
+    const teamRequest = f.state.requests.find(request => request.url.endsWith('?type=2'));
+    assert.equal(teamRequest.url, 'https://open.bigmodel.cn/api/monitor/usage/quota/limit?type=2');
+    assert.equal(teamRequest.options.headers.Authorization, 'team-secret');
+    assert.equal(teamRequest.options.headers['bigmodel-organization'], 'org-123');
+    assert.equal(teamRequest.options.headers['bigmodel-project'], 'proj-456');
+    // The personal row keeps its unscoped request; only one request per row.
+    const personal = f.state.requests.filter(request => !request.url.endsWith('?type=2'));
+    assert.equal(personal.length, 1);
+    assert.equal(personal[0].url, 'https://open.bigmodel.cn/api/monitor/usage/quota/limit');
+    assert.equal(personal[0].options.headers['bigmodel-organization'], undefined);
+    assert.equal(f.state.requests.length, 2);
+    // Scope identifiers and credentials never reach the client snapshot.
+    const serialized = JSON.stringify(result);
+    for (const value of ['org-123', 'proj-456', 'team-secret', 'teamPlan', 'bigmodel-organization']) assert.equal(serialized.includes(value), false);
+    // Per-provider refresh addresses the team row by its own id and hits its cache.
+    const only = await f.manager.snapshot({ refresh: true, provider: 'zai-coding-cn::team' });
+    assert.deepEqual(only.rows.map(row => row.id), ['zai-coding-cn::team']);
+    assert.equal(only.rows[0].status, 'ok');
+    // A provider with no team configuration yields no team row.
+    f.state.teamPlans = {};
+    assert.deepEqual((await f.manager.snapshot()).rows.map(row => row.id), ['zai-coding-cn']);
+    f.state.teamPlans = { 'zai-coding-plan': { organizationId: '', projectId: '' } };
+    assert.deepEqual((await f.manager.snapshot()).rows.map(row => row.id), ['zai-coding-cn']);
+  } finally { await f.manager.dispose(); }
+});
+
+test('GLM Team Plan: no-plan and empty replies are states, not outages; an empty success without IDs asks for the scope', async () => {
+  const f = fixture({ providers: { zai: { apiKeyEnv: 'ZAI_API_KEY' } }, keys: { ZAI_API_KEY: 'zai-secret' } });
+  f.state.teamPlans = { 'zai-coding-plan': { organizationId: '', projectId: '' } };
+  f.state.response = { code: 400, msg: '当前用户不存在coding plan', success: false };
+  try {
+    const result = await f.manager.snapshot();
+    assert.deepEqual(result.rows.map(row => [row.id, row.kind]), [['zai', 'zai-coding-plan'], ['zai::team', 'zai-coding-plan-team']]);
+    assert.equal(result.rows[0].status, 'no-plan', 'the personal monitor rejects a team key the same way');
+    const team = result.rows[1];
+    assert.equal(team.status, 'no-plan');
+    assert.equal(team.source, 'glm-team-plan-usage');
+    assert.deepEqual(team.metrics, []);
+    assert.equal(team.dashboardUrl, 'https://z.ai/manage-apikey/subscription');
+    const request = f.state.requests.find(item => item.url.startsWith('https://api.z.ai/') && item.url.endsWith('?type=2'));
+    assert.equal(f.state.requests.length, 2);
+    assert.equal(request.url, 'https://api.z.ai/api/monitor/usage/quota/limit?type=2');
+    assert.equal(request.options.headers.Authorization, 'zai-secret');
+    assert.equal(request.options.headers['bigmodel-organization'], undefined);
+    assert.equal(request.options.headers['bigmodel-project'], undefined);
+    // Upstream error text is mapped to a status, never echoed.
+    assert.equal(JSON.stringify(result).includes('coding plan'), false);
+    // Live-verified shapes: an empty success is a scope request without IDs and
+    // "no plan" with them; the personal row keeps its generic parse failure.
+    f.state.response = { code: 200, msg: '操作成功', data: {}, success: true };
+    f.advance(120_001);
+    let empty = await f.manager.snapshot();
+    assert.deepEqual(empty.rows.map(row => row.status), ['invalid-response', 'team-scope-required']);
+    assert.equal(empty.rows[1].source, 'glm-team-plan-usage');
+    f.state.teamPlans = { 'zai-coding-plan': { organizationId: 'org', projectId: 'proj' } };
+    empty = await f.manager.snapshot();
+    assert.equal(empty.rows[1].status, 'no-plan');
+    const scoped = f.state.requests.at(-1);
+    assert.equal(scoped.url, 'https://api.z.ai/api/monitor/usage/quota/limit?type=2');
+    assert.equal(scoped.options.headers['bigmodel-organization'], 'org');
+    assert.equal(scoped.options.headers['bigmodel-project'], 'proj');
+    assert.equal(JSON.stringify(empty).includes('org'), false);
+    // Transport failures on the team monitor keep the ordinary error mapping.
+    f.state.code = 403;
+    f.advance(120_001);
+    const forbidden = await f.manager.snapshot();
+    assert.equal(forbidden.rows[1].status, 'forbidden');
+  } finally { await f.manager.dispose(); }
+});
+
+test('GLM Team Plan rows inherit a blocked route, skip unknown kinds and survive a throwing settings provider', async () => {
+  const blocked = fixture({ providers: { 'zai-coding-cn': { baseURL: 'https://open.bigmodel.cn/api/coding/paas/v4', apiKeyEnv: 'not a ref' } }, teamPlans: { 'glm-cn': { organizationId: 'org', projectId: 'proj' } } });
+  try {
+    const result = await blocked.manager.snapshot();
+    assert.deepEqual(result.rows.map(row => [row.id, row.status]), [['zai-coding-cn', 'missing-credential'], ['zai-coding-cn::team', 'missing-credential']]);
+    assert.equal(blocked.state.requests.length, 0);
+  } finally { await blocked.manager.dispose(); }
+  const other = fixture({ providers: { deepseek: { apiKeyEnv: 'CUSTOM_KEY' } }, teamPlans: { 'glm-cn': { organizationId: '', projectId: '' } } });
+  try {
+    assert.deepEqual((await other.manager.snapshot()).rows.map(row => row.id), ['deepseek']);
+  } finally { await other.manager.dispose(); }
+  const throwing = fixture({ providers: { zai: { apiKeyEnv: 'ZAI_API_KEY' } }, keys: { ZAI_API_KEY: 'k' } });
+  throwing.manager.teamPlansProvider = () => { throw new Error('settings unavailable'); };
+  try {
+    assert.deepEqual((await throwing.manager.snapshot()).rows.map(row => row.id), ['zai']);
+  } finally { await throwing.manager.dispose(); }
 });
 
 test('domestic GLM Standard API uses only the supplied balance and resource endpoints with Bearer auth', async () => {

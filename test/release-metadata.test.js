@@ -14,7 +14,7 @@ const emptyServices = {
 };
 
 test('release identity, compatibility boundary and shipped metadata module are consistent', () => {
-  assert.equal(manifest.version, '0.7.5');
+  assert.equal(manifest.version, '0.7.6');
   assert.equal(PLUGIN_VERSION, manifest.version);
   assert.equal(manifest.engines.dsh, '>=0.2.2-rc.1 <0.2.3-0');
   assert.ok(manifest.files.includes('index.js'));
@@ -67,7 +67,7 @@ test('missing or relative runtime anchors never trigger file discovery', () => {
 test('wrapper packages and malformed versions never masquerade as a DSH runtime', () => {
   const invalid = [
     { name: '@deepseek-ai/dsh-desktop-runtime', version: '0.2.2-rc.5' },
-    { name: 'dsh-quota-cordis', version: '0.7.3' },
+    { name: 'dsh-glmteam-quota', version: '0.7.3' },
     ...[undefined, null, 5, '', ' 0.2.2', '0.2.2\r\nX-Secret: no', '0.2.2-01', '00.2.2', '0.2.2-rc..5', 'x'.repeat(257)].map(version => ({ name: '@deepseek-ai/dsh', version })),
   ];
   for (const value of invalid) assert.equal(resolveDshRuntimeVersion({ installation: '/synthetic/dsh', read: () => value }), 'unknown');

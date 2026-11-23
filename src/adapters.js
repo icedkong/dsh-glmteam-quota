@@ -4,6 +4,8 @@
 // https://api-docs.deepseek.com/api/get-user-balance/
 // https://docs.z.ai/devpack/extension/usage-query-plugin
 // https://github.com/zai-org/zai-coding-plugins/blob/main/plugins/glm-plan-usage/skills/usage-query-skill/scripts/query-usage.mjs
+// Team Plan (same monitor, `?type=2` + bigmodel-organization/project headers):
+// https://github.com/zai-org/ZCode/blob/main/docs/bigmodel-coding-plan-usage-quota.md
 // https://github.com/steipete/CodexBar/blob/main/docs/zai.md
 // https://github.com/steipete/CodexBar/blob/main/Sources/CodexBarCore/Resources/Plugins/zai.js
 
@@ -87,6 +89,55 @@ export function classifyProvider({ provider, baseURL } = {}) {
   return kind
     ? { kind, dashboardUrl: DASHBOARDS[kind] }
     : { kind: 'unsupported', dashboardUrl: null };
+}
+
+// GLM Team Plan quota reuses the Coding Plan monitor with `?type=2`, which the
+// backend routes to the team subscription. Without it, even a team project key
+// with team headers falls through to the personal branch and is rejected.
+// Shape reference: https://github.com/zai-org/ZCode/blob/main/packages/services/src/usage-stats/providers/bigmodelUsageQuotaProvider.ts
+export const GLM_TEAM_PLAN_KINDS = Object.freeze({ 'glm-cn': 'glm-cn-team', 'zai-coding-plan': 'zai-coding-plan-team' });
+const TEAM_PLAN_SCOPES = Object.freeze(['bigmodel-organization', 'bigmodel-project']);
+
+/** Map a personal Coding Plan kind to its Team Plan sibling kind. */
+export function teamPlanKind(kind) {
+  return own(GLM_TEAM_PLAN_KINDS, kind) ? GLM_TEAM_PLAN_KINDS[kind] : undefined;
+}
+
+export function isTeamPlanKind(kind) {
+  return Object.values(GLM_TEAM_PLAN_KINDS).includes(kind);
+}
+
+/** Headers scope the monitor to one team project. Both IDs are optional: when
+ * neither is configured the backend reads the account's default project, which
+ * is what a single-team account wants. Values are validated by the settings
+ * layer as printable ASCII, so they are safe to place in request headers.
+ */
+export function teamPlanHeaders({ organizationId, projectId } = {}) {
+  const headers = {};
+  if (organizationId) headers[TEAM_PLAN_SCOPES[0]] = organizationId;
+  if (projectId) headers[TEAM_PLAN_SCOPES[1]] = projectId;
+  return headers;
+}
+
+/** Recognize the monitor's "no plan" business reply without echoing its text.
+ * The Team monitor answers this way for keys that belong to no team plan; it is
+ * a definite state, not a transport failure, so it must not be retried as one.
+ */
+export function isGlmNoPlan(json) {
+  if (!object(json)) return false;
+  const message = [json.msg, json.message].find(value => typeof value === 'string') ?? '';
+  return /不存在\s*coding\s*plan|没有资格|no\s*coding\s*plan/i.test(message);
+}
+
+/** A successful envelope with no usable limits. The Team monitor answers this
+ * way (verified live: `{code:200, data:{}}`) when no project scope was supplied,
+ * so it must be reported as "scope required", never as a zero or a parse error.
+ */
+export function isGlmEmptyQuota(json) {
+  if (!object(json)) return false;
+  if (json.success === false || (own(json, 'code') && json.code !== 200 && json.code !== 0)) return false;
+  const data = own(json, 'data') ? json.data : json;
+  return !object(data) || !Array.isArray(data.limits) || data.limits.length === 0;
 }
 
 function money(value, allowNegative) {

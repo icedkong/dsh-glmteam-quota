@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "DSH Quota+",
-    "description": "额度与用量面板：多提供商余额、订阅额度与 OpenAI 组织支出；模型管理支持多供应商，并增强 DSH 官方模型管理的授权、可选模型与推理强度。"
+    "title": "GLM Quota+",
+    "description": "额度与用量面板：多提供商余额、订阅额度（含 GLM 团队版套餐）与 OpenAI 组织支出。"
   }
 }

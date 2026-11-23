@@ -48,7 +48,7 @@ test('a real endpoint wins over catalog grouping, with no implicit hostname on l
 });
 
 test('catalog source is labeled for overview chips and individual affected rows', () => {
-  assert.match(source, /title: 'DSH Quota\+'/);
+  assert.match(source, /title: 'GLM Quota\+'/);
   assert.match(source, /providerManagerCatalogGroupingSource: '来自内置模型目录，仅用于归组'/);
   assert.match(source, /providerManagerCatalogGroupingSource: 'Built-in model catalog; for grouping only'/);
   assert.match(source, /catalogGroupingHost \? h\('p', \{ className: 'pq-manager-meta' \}, `\$\{catalogGroupingHost\} · \$\{t\('providerManagerCatalogGroupingSource'\)\}`\)/);

@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report security issues privately through GitHub's **Report a vulnerability** flow for [WXYS1209/dsh-quota-cordis](https://github.com/WXYS1209/dsh-quota-cordis/security/advisories/new), if enabled. If private reporting is unavailable, open an issue asking for a private contact; do not include credentials or tokens in a public issue.
+Please report security issues privately through GitHub's **Report a vulnerability** flow for [icedkong/dsh-glmteam-quota](https://github.com/icedkong/dsh-glmteam-quota/security/advisories/new), if enabled. If private reporting is unavailable, open an issue asking for a private contact; do not include credentials or tokens in a public issue.
 
 ## Credential handling
 

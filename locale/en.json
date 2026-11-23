@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "DSH Quota+",
-    "description": "Multi-provider quota and usage dashboard with OpenAI organization spend; model management extends DSH's official authorization, model selection and reasoning effort."
+    "title": "GLM Quota+",
+    "description": "Multi-provider quota and usage dashboard: balances, subscription quotas (incl. GLM Team Plan) and OpenAI organization spend."
   }
 }

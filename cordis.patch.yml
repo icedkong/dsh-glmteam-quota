@@ -1,4 +1,4 @@
 - insert:
     - id: provider-quota
-      name: dsh-quota-cordis
+      name: dsh-glmteam-quota
       config: {}
